@@ -109,6 +109,14 @@ export default function LeaveDatePage() {
             return false;
         }
 
+        // 檢查是否已經請過假
+        const hasAlreadyTakenLeave = leaveRecords.some(record => 
+            record.date === date && record.name === memberName
+        );
+        if (hasAlreadyTakenLeave) {
+            return false;
+        }
+
         const shift = getShiftForDate(team, date);
         if (!shift) return false;
         
@@ -242,39 +250,23 @@ export default function LeaveDatePage() {
         return false;
     };
 
-    // 提交請假
-    const handleSubmit = async () => {
+    // 處理請假提交
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        
         if (!selectedTeam || !selectedMember) {
             alert('請選擇班級和人員');
             return;
         }
 
-        if (!canTakeLeave(selectedTeam, selectedMember)) {
-            if (isNotFutureDate()) {
-                alert('今天以前的日期不可請假');
-            } else {
-                const shift = getShiftForDate(selectedTeam, date);
-                alert(`該班級當天為${shift}，不得請假`);
-            }
+        // 檢查是否已經請過假
+        const hasAlreadyTakenLeave = leaveRecords.some(record => 
+            record.date === date && record.name === selectedMember
+        );
+        if (hasAlreadyTakenLeave) {
+            alert('該人員已經請過假');
             return;
         }
-
-        const availableMembers = findRegularMembers(selectedTeam, selectedMember);
-        if (availableMembers.length === 0) {
-            alert('沒有可加班的人員');
-            return;
-        }
-
-        const newRecord: LeaveRecord = {
-            date,
-            name: selectedMember,
-            overtime: {
-                type: 'regular' as const,
-                name: '',
-                team: '',
-                confirmed: false
-            }
-        };
 
         try {
             const response = await fetch('/api/leave', {
@@ -282,15 +274,25 @@ export default function LeaveDatePage() {
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify(newRecord),
+                body: JSON.stringify({
+                    date,
+                    name: selectedMember,
+                    team: selectedTeam,
+                    confirmed: false
+                }),
             });
 
-            if (!response.ok) throw new Error('Failed to create leave record');
-            
-            await fetchLeaveRecords();
-            setIsSubmitted(true);
+            if (!response.ok) {
+                throw new Error('請假失敗');
+            }
+
+            const newRecord = await response.json();
+            setLeaveRecords([...leaveRecords, newRecord]);
+            setSelectedTeam('');
+            setSelectedMember('');
+            alert('請假成功');
         } catch (error) {
-            console.error('Error creating leave record:', error);
+            console.error('請假失敗:', error);
             alert('請假失敗，請稍後再試');
         }
     };
