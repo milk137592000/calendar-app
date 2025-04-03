@@ -168,24 +168,10 @@ export default function LeaveDatePage() {
     const findRegularMembers = (team: string, leaveRequester: string, isSecondMember: boolean = false) => {
         const availableMembers: string[] = [];
         const leaveRole = getMemberRole(leaveRequester);
-        const leaveShift = getTeamShift(team);
         
         // 找出所有可加班的人員（除了同班人員）
         for (const [teamName, teamData] of Object.entries(TEAMS)) {
             if (teamName === team) continue;  // 跳過同班人員
-            
-            // 根據請假人的班別和是否為第二位加班人員來過濾
-            const teamShift = getTeamShift(teamName);
-            if (leaveShift === '早班') {
-                if (!isSecondMember && teamShift !== '中班') continue;
-                if (isSecondMember && teamShift !== '夜班') continue;
-            } else if (leaveShift === '中班') {
-                if (!isSecondMember && teamShift !== '早班') continue;
-                if (isSecondMember && teamShift !== '夜班') continue;
-            } else if (leaveShift === '夜班') {
-                if (!isSecondMember && teamShift !== '早班') continue;
-                if (isSecondMember && teamShift !== '中班') continue;
-            }
             
             teamData.members.forEach(member => {
                 const isOnLeave = leaveRecords.some(record => 
@@ -441,6 +427,23 @@ export default function LeaveDatePage() {
         return '';
     };
 
+    // 檢查是否為循環中的第一天
+    const isFirstDayOfShift = (team: string, shift: ShiftType) => {
+        const startDate = new Date(2025, 3, 1);
+        const targetDate = new Date(date);
+        const daysDiff = Math.floor((targetDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+        
+        const startPos = TEAM_START_POSITIONS[team];
+        const cyclePosition = ((startPos - 1 + daysDiff) % 8 + 8) % 8;
+        const currentShift = SHIFT_CYCLE[cyclePosition];
+        
+        // 如果是早班或中班，檢查是否為循環中的第一天
+        if (currentShift === shift) {
+            return cyclePosition === 0 || cyclePosition === 2; // 0是早班第一天，2是中班第一天
+        }
+        return false;
+    };
+
     // 提交請假
     const handleSubmit = () => {
         if (!selectedTeam || !selectedMember) {
@@ -671,15 +674,29 @@ export default function LeaveDatePage() {
                                                                 <p className="text-sm text-green-600 font-medium">
                                                                     加班建議：<br />
                                                                     {team && getTeamShift(team) === '早班' ? (
-                                                                        <>
-                                                                            第一加班人員：{getTeamByShift('中班')}班<br />
-                                                                            第二加班人員：{getTeamByShift('夜班')}班
-                                                                        </>
+                                                                        isFirstDayOfShift(team, '早班') ? (
+                                                                            <>
+                                                                                第一加班人員：{getTeamByShift('中班')}班<br />
+                                                                                第二加班人員：{getTeamByShift('小休')}班
+                                                                            </>
+                                                                        ) : (
+                                                                            <>
+                                                                                第一加班人員：{getTeamByShift('中班')}班<br />
+                                                                                第二加班人員：{getTeamByShift('夜班')}班
+                                                                            </>
+                                                                        )
                                                                     ) : team && getTeamShift(team) === '中班' ? (
-                                                                        <>
-                                                                            第一加班人員：{getTeamByShift('早班')}班<br />
-                                                                            第二加班人員：{getTeamByShift('夜班')}班
-                                                                        </>
+                                                                        isFirstDayOfShift(team, '中班') ? (
+                                                                            <>
+                                                                                第一加班人員：{getTeamByShift('早班')}班<br />
+                                                                                第二加班人員：{getTeamByShift('小休')}班
+                                                                            </>
+                                                                        ) : (
+                                                                            <>
+                                                                                第一加班人員：{getTeamByShift('早班')}班<br />
+                                                                                第二加班人員：{getTeamByShift('夜班')}班
+                                                                            </>
+                                                                        )
                                                                     ) : team && getTeamShift(team) === '夜班' ? (
                                                                         <>
                                                                             第一加班人員：{getTeamByShift('早班', true)}班<br />
