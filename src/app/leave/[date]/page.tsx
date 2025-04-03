@@ -3,7 +3,9 @@
 import React, { useState, useEffect } from 'react';
 import { format, isAfter, isToday, startOfDay } from 'date-fns';
 import { useParams, useRouter } from 'next/navigation';
-import { TEAMS, SCHEDULES, LeaveRecord, ShiftType } from '@/types/schedule';
+import { TEAMS } from '@/data/teams';
+import { getShiftForDate, getMemberTeam, isTeamBigRestOnTuesday } from '@/utils/schedule';
+import type { LeaveRecord } from '@/types/LeaveRecord';
 
 // 8天循環的班別順序
 const SHIFT_CYCLE: ShiftType[] = [
@@ -419,16 +421,16 @@ export default function LeaveDatePage() {
                     name: record.name,
                     overtime: {
                         ...record.overtime,
-                        ...(isSecondMember
+                        ...(isSecondMember && record.overtime
                             ? {
                                 secondMember: {
-                                    ...record.overtime.secondMember,
-                                    confirmed: !record.overtime.secondMember?.confirmed
+                                    ...record.overtime?.secondMember,
+                                    confirmed: !record.overtime?.secondMember?.confirmed
                                 }
                             }
                             : {
-                                confirmed: !record.overtime.confirmed,
-                                firstConfirmed: !record.overtime.firstConfirmed
+                                confirmed: !record.overtime?.confirmed,
+                                firstConfirmed: !record.overtime?.firstConfirmed
                             })
                     }
                 }),
