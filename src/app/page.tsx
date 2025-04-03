@@ -139,8 +139,10 @@ export default function Home() {
     return (
         <main className="min-h-screen bg-gray-100">
             <div className="container mx-auto py-8 px-4">
-                <div className="mb-8 flex flex-col sm:flex-row justify-between items-center gap-4">
-                    <h1 className="text-3xl font-bold text-gray-800 w-full text-center">四輕丁二烯</h1>
+                <h1 className="text-2xl font-bold text-gray-800 mb-4 w-full text-center pl-4">
+                    四輕丁二烯
+                </h1>
+                <div className="mb-8 flex flex-col sm:flex-row justify-end items-center gap-4">
                     <div className="relative">
                         <select
                             value={selectedTeam}

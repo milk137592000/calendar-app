@@ -168,10 +168,24 @@ export default function LeaveDatePage() {
     const findRegularMembers = (team: string, leaveRequester: string, isSecondMember: boolean = false) => {
         const availableMembers: string[] = [];
         const leaveRole = getMemberRole(leaveRequester);
+        const leaveShift = getTeamShift(team);
         
         // 找出所有可加班的人員（除了同班人員）
         for (const [teamName, teamData] of Object.entries(TEAMS)) {
             if (teamName === team) continue;  // 跳過同班人員
+            
+            // 根據請假人的班別和是否為第二位加班人員來過濾
+            const teamShift = getTeamShift(teamName);
+            if (leaveShift === '早班') {
+                if (!isSecondMember && teamShift !== '中班') continue;
+                if (isSecondMember && teamShift !== '夜班') continue;
+            } else if (leaveShift === '中班') {
+                if (!isSecondMember && teamShift !== '早班') continue;
+                if (isSecondMember && teamShift !== '夜班') continue;
+            } else if (leaveShift === '夜班') {
+                if (!isSecondMember && teamShift !== '早班') continue;
+                if (isSecondMember && teamShift !== '中班') continue;
+            }
             
             teamData.members.forEach(member => {
                 const isOnLeave = leaveRecords.some(record => 
@@ -411,9 +425,15 @@ export default function LeaveDatePage() {
     };
 
     // 獲取指定班別的班級代號
-    const getTeamByShift = (shift: ShiftType) => {
+    const getTeamByShift = (shift: ShiftType, isPreviousDay: boolean = false) => {
+        const targetDate = new Date(date);
+        if (isPreviousDay) {
+            targetDate.setDate(targetDate.getDate() - 1);
+        }
+        const targetDateStr = format(targetDate, 'yyyy-MM-dd');
+        
         for (const [team, teamData] of Object.entries(TEAMS)) {
-            const teamShift = getShiftForDate(team, date);
+            const teamShift = getShiftForDate(team, targetDateStr);
             if (teamShift === shift) {
                 return team;
             }
@@ -662,8 +682,8 @@ export default function LeaveDatePage() {
                                                                         </>
                                                                     ) : team && getTeamShift(team) === '夜班' ? (
                                                                         <>
-                                                                            第一加班人員：{getTeamByShift('早班')}班<br />
-                                                                            第二加班人員：{getTeamByShift('中班')}班
+                                                                            第一加班人員：{getTeamByShift('早班', true)}班<br />
+                                                                            第二加班人員：{getTeamByShift('中班', true)}班
                                                                         </>
                                                                     ) : (
                                                                         '請選擇加班類型'
