@@ -2,6 +2,7 @@ export interface LeaveRecord {
     _id?: string;
     date: string;
     name: string;
+    confirmed?: boolean;
     overtime?: {
         type: 'bigRest' | 'regular';
         name?: string;

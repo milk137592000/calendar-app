@@ -4,14 +4,14 @@ import React, { useState, useEffect } from 'react';
 import { format, isAfter, isToday, startOfDay } from 'date-fns';
 import { useParams, useRouter } from 'next/navigation';
 import { TEAMS } from '@/data/teams';
-import { getShiftForDate, getMemberTeam, isTeamBigRestOnTuesday } from '@/utils/schedule';
+import { getShiftForDate, getMemberTeam, isTeamBigRestOnTuesday, ShiftType } from '@/utils/schedule';
 import type { LeaveRecord } from '@/types/LeaveRecord';
 
 // 8天循環的班別順序
 const SHIFT_CYCLE: ShiftType[] = [
     '早班', '早班',   // 早班連續2天
     '中班', '中班',   // 中班連續2天
-    '小休',          // 小休1天
+    '大休',          // 大休1天
     '夜班', '夜班',   // 夜班連續2天
     '大休'           // 大休1天
 ];
@@ -112,14 +112,15 @@ export default function LeaveDatePage() {
         const shift = getShiftForDate(team, date);
         if (!shift) return false;
         
-        if (shift === '小休' || shift === '大休') {
+        if (shift === '大休') {
             return false;
         }
         return true;
     };
 
     // 獲取班級當天班別
-    const getTeamShift = (team: string) => {
+    const getTeamShift = (team: string): ShiftType | null => {
+        if (!team) return null;
         return getShiftForDate(team, date);
     };
 
@@ -754,7 +755,7 @@ export default function LeaveDatePage() {
                                                                             </p>
                                                                             <p className="text-gray-700">
                                                                                 <span className="font-medium">當天班別：</span>
-                                                                                {getTeamShift(record.overtime.team)}
+                                                                                {record.overtime.team ? getTeamShift(record.overtime.team) || '未排班' : '未知'}
                                                                             </p>
                                                                         </>
                                                                     )}
@@ -810,7 +811,7 @@ export default function LeaveDatePage() {
                                                                                     </p>
                                                                                     <p className="text-gray-700">
                                                                                         <span className="font-medium">當天班別：</span>
-                                                                                        {getTeamShift(record.overtime.team)}
+                                                                                        {record.overtime.team ? getTeamShift(record.overtime.team) || '未排班' : '未知'}
                                                                                     </p>
                                                                                 </>
                                                                             )}
@@ -863,7 +864,7 @@ export default function LeaveDatePage() {
                                                                                     </p>
                                                                                     <p className="text-gray-700">
                                                                                         <span className="font-medium">當天班別：</span>
-                                                                                        {getTeamShift(record.overtime.secondMember.team)}
+                                                                                        {record.overtime.secondMember.team ? getTeamShift(record.overtime.secondMember.team) || '未排班' : '未知'}
                                                                                     </p>
                                                                                 </>
                                                                             )}
