@@ -47,14 +47,17 @@ export default function LeaveDatePage() {
         return !isAfter(today, selectedDate);
     };
 
-    // 從 localStorage 讀取請假記錄
-    useEffect(() => {
-        const records = localStorage.getItem('leaveRecords');
-        if (records) {
-            const allRecords: LeaveRecord[] = JSON.parse(records);
-            setLeaveRecords(allRecords.filter(record => record.date === date));
+    // 獲取請假記錄
+    const fetchLeaveRecords = async () => {
+        try {
+            const response = await fetch(`/api/leave?date=${date}`);
+            if (!response.ok) throw new Error('Failed to fetch leave records');
+            const records = await response.json();
+            setLeaveRecords(records);
+        } catch (error) {
+            console.error('Error fetching leave records:', error);
         }
-    }, [date]);
+    };
 
     // 生成班級選項
     const teamOptions = Object.keys(TEAMS).map(team => ({
@@ -191,214 +194,6 @@ export default function LeaveDatePage() {
         return availableMembers;
     };
 
-    // 更新加班類型
-    const handleUpdateOvertimeType = (record: LeaveRecord, type: 'bigRest' | 'regular') => {
-        const records = localStorage.getItem('leaveRecords');
-        if (!records) return;
-
-        const allRecords: LeaveRecord[] = JSON.parse(records);
-        
-        const updatedRecords = allRecords.map(r => {
-            if (r.date === record.date && r.name === record.name) {
-                return {
-                    ...r,
-                    overtime: {
-                        type,
-                        name: '',
-                        team: '',
-                        confirmed: false
-                    }
-                } as LeaveRecord;
-            }
-            return r;
-        });
-
-        localStorage.setItem('leaveRecords', JSON.stringify(updatedRecords));
-        setLeaveRecords(updatedRecords.filter(r => r.date === date));
-    };
-
-    // 更新加班人員
-    const handleUpdateOvertime = (record: LeaveRecord, newOvertimeMember: string) => {
-        const overtimeTeam = getMemberTeam(newOvertimeMember);
-        if (!overtimeTeam || !record.overtime) return;
-
-        // 檢查該班級在週二是否為大休
-        if (isTeamBigRestOnTuesday(overtimeTeam)) {
-            alert('該班級在週二為大休，不能加班');
-            return;
-        }
-
-        const records = localStorage.getItem('leaveRecords');
-        if (!records) return;
-
-        const allRecords: LeaveRecord[] = JSON.parse(records);
-        
-        const updatedRecords = allRecords.map(r => {
-            if (r.date === record.date && r.name === record.name && r.overtime) {
-                return {
-                    ...r,
-                    overtime: {
-                        ...r.overtime,
-                        name: newOvertimeMember,
-                        team: overtimeTeam,
-                        confirmed: false,
-                        firstConfirmed: false
-                    }
-                } as LeaveRecord;
-            }
-            return r;
-        });
-
-        localStorage.setItem('leaveRecords', JSON.stringify(updatedRecords));
-        setLeaveRecords(updatedRecords.filter(r => r.date === date));
-    };
-
-    // 更新第二位加班人員
-    const handleUpdateSecondOvertime = (record: LeaveRecord, newOvertimeMember: string) => {
-        const overtimeTeam = getMemberTeam(newOvertimeMember);
-        if (!overtimeTeam || !record.overtime) return;
-
-        // 檢查該班級在週二是否為大休
-        if (isTeamBigRestOnTuesday(overtimeTeam)) {
-            alert('該班級在週二為大休，不能加班');
-            return;
-        }
-
-        // 檢查是否與第一位加班人員同班
-        if (record.overtime.name && getMemberTeam(record.overtime.name) === overtimeTeam) {
-            alert('不能選擇與第一位加班人員同班的人員');
-            return;
-        }
-
-        const records = localStorage.getItem('leaveRecords');
-        if (!records) return;
-
-        const allRecords: LeaveRecord[] = JSON.parse(records);
-        
-        const updatedRecords = allRecords.map(r => {
-            if (r.date === record.date && r.name === record.name && r.overtime) {
-                return {
-                    ...r,
-                    overtime: {
-                        ...r.overtime,
-                        secondMember: {
-                            name: newOvertimeMember,
-                            team: overtimeTeam,
-                            confirmed: false
-                        }
-                    }
-                } as LeaveRecord;
-            }
-            return r;
-        });
-
-        localStorage.setItem('leaveRecords', JSON.stringify(updatedRecords));
-        setLeaveRecords(updatedRecords.filter(r => r.date === date));
-    };
-
-    // 確認加班
-    const handleConfirmOvertime = (record: LeaveRecord, member: 'first' | 'second' = 'first') => {
-        if (!record.overtime) return;
-
-        const records = localStorage.getItem('leaveRecords');
-        if (!records) return;
-
-        const allRecords: LeaveRecord[] = JSON.parse(records);
-        
-        const updatedRecords = allRecords.map(r => {
-            if (r.date === record.date && r.name === record.name && r.overtime) {
-                if (member === 'first') {
-                    return {
-                        ...r,
-                        overtime: {
-                            ...r.overtime,
-                            firstConfirmed: true,
-                            confirmed: r.overtime.type === 'bigRest' || (r.overtime.secondMember?.confirmed === true)
-                        }
-                    } as LeaveRecord;
-                } else {
-                    return {
-                        ...r,
-                        overtime: {
-                            ...r.overtime,
-                            confirmed: r.overtime.firstConfirmed === true,
-                            secondMember: {
-                                ...r.overtime.secondMember!,
-                                confirmed: true
-                            }
-                        }
-                    } as LeaveRecord;
-                }
-            }
-            return r;
-        });
-
-        localStorage.setItem('leaveRecords', JSON.stringify(updatedRecords));
-        setLeaveRecords(updatedRecords.filter(r => r.date === date));
-    };
-
-    // 取消加班
-    const handleCancelOvertime = (record: LeaveRecord, member: 'first' | 'second' = 'first') => {
-        if (!window.confirm('確定要取消此加班記錄嗎？')) {
-            return;
-        }
-
-        const records = localStorage.getItem('leaveRecords');
-        if (!records) return;
-
-        const allRecords: LeaveRecord[] = JSON.parse(records);
-        
-        const updatedRecords = allRecords.map(r => {
-            if (r.date === record.date && r.name === record.name && r.overtime) {
-                if (member === 'first') {
-                    return {
-                        ...r,
-                        overtime: {
-                            ...r.overtime,
-                            name: '',
-                            team: '',
-                            confirmed: false,
-                            firstConfirmed: false,
-                            secondMember: r.overtime.secondMember  // 保留第二位加班人員的資訊
-                        }
-                    } as LeaveRecord;
-                } else {
-                    return {
-                        ...r,
-                        overtime: {
-                            ...r.overtime,
-                            confirmed: false,
-                            secondMember: undefined
-                        }
-                    } as LeaveRecord;
-                }
-            }
-            return r;
-        });
-
-        localStorage.setItem('leaveRecords', JSON.stringify(updatedRecords));
-        setLeaveRecords(updatedRecords.filter(r => r.date === date));
-    };
-
-    // 取消請假
-    const handleCancelLeave = (record: LeaveRecord) => {
-        if (!window.confirm('確定要取消此請假記錄嗎？')) {
-            return;
-        }
-
-        const records = localStorage.getItem('leaveRecords');
-        if (!records) return;
-
-        const allRecords: LeaveRecord[] = JSON.parse(records);
-        
-        const updatedRecords = allRecords.filter(
-            r => !(r.date === record.date && r.name === record.name)
-        );
-
-        localStorage.setItem('leaveRecords', JSON.stringify(updatedRecords));
-        setLeaveRecords(updatedRecords.filter(r => r.date === date));
-    };
-
     // 獲取當日大休的班級
     const getBigRestTeam = () => {
         for (const [team, teamData] of Object.entries(TEAMS)) {
@@ -445,7 +240,7 @@ export default function LeaveDatePage() {
     };
 
     // 提交請假
-    const handleSubmit = () => {
+    const handleSubmit = async () => {
         if (!selectedTeam || !selectedMember) {
             alert('請選擇班級和人員');
             return;
@@ -478,23 +273,228 @@ export default function LeaveDatePage() {
             }
         };
 
-        const records = localStorage.getItem('leaveRecords');
-        const allRecords: LeaveRecord[] = records ? JSON.parse(records) : [];
+        try {
+            const response = await fetch('/api/leave', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(newRecord),
+            });
 
-        const isDuplicate = allRecords.some(
-            record => record.date === date && record.name === selectedMember
-        );
+            if (!response.ok) throw new Error('Failed to create leave record');
+            
+            await fetchLeaveRecords();
+            setIsSubmitted(true);
+        } catch (error) {
+            console.error('Error creating leave record:', error);
+            alert('請假失敗，請稍後再試');
+        }
+    };
 
-        if (isDuplicate) {
-            alert('該人員已經在此日期請假');
+    // 更新加班類型
+    const handleUpdateOvertimeType = async (record: LeaveRecord, type: 'bigRest' | 'regular') => {
+        try {
+            const response = await fetch('/api/leave', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    date: record.date,
+                    name: record.name,
+                    overtime: {
+                        type,
+                        name: '',
+                        team: '',
+                        confirmed: false
+                    }
+                }),
+            });
+
+            if (!response.ok) throw new Error('Failed to update overtime type');
+            
+            await fetchLeaveRecords();
+        } catch (error) {
+            console.error('Error updating overtime type:', error);
+            alert('更新加班類型失敗，請稍後再試');
+        }
+    };
+
+    // 更新加班人員
+    const handleUpdateOvertime = async (record: LeaveRecord, newOvertimeMember: string) => {
+        const overtimeTeam = getMemberTeam(newOvertimeMember);
+        if (!overtimeTeam || !record.overtime) return;
+
+        // 檢查該班級在週二是否為大休
+        if (isTeamBigRestOnTuesday(overtimeTeam)) {
+            alert('該班級在週二為大休，不能加班');
             return;
         }
 
-        allRecords.push(newRecord);
-        localStorage.setItem('leaveRecords', JSON.stringify(allRecords));
-        setLeaveRecords([...leaveRecords, newRecord]);
-        setIsSubmitted(true);
+        try {
+            const response = await fetch('/api/leave', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    date: record.date,
+                    name: record.name,
+                    overtime: {
+                        ...record.overtime,
+                        name: newOvertimeMember,
+                        team: overtimeTeam,
+                        confirmed: false,
+                        firstConfirmed: false
+                    }
+                }),
+            });
+
+            if (!response.ok) throw new Error('Failed to update overtime member');
+            
+            await fetchLeaveRecords();
+        } catch (error) {
+            console.error('Error updating overtime member:', error);
+            alert('更新加班人員失敗，請稍後再試');
+        }
     };
+
+    // 更新第二位加班人員
+    const handleUpdateSecondOvertime = async (record: LeaveRecord, newSecondMember: string) => {
+        const secondTeam = getMemberTeam(newSecondMember);
+        if (!secondTeam || !record.overtime) return;
+
+        // 檢查該班級在週二是否為大休
+        if (isTeamBigRestOnTuesday(secondTeam)) {
+            alert('該班級在週二為大休，不能加班');
+            return;
+        }
+
+        // 檢查是否與第一位加班人員同班
+        if (record.overtime.team === secondTeam) {
+            alert('第二位加班人員不能與第一位加班人員同班');
+            return;
+        }
+
+        try {
+            const response = await fetch('/api/leave', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    date: record.date,
+                    name: record.name,
+                    overtime: {
+                        ...record.overtime,
+                        secondMember: {
+                            name: newSecondMember,
+                            team: secondTeam,
+                            confirmed: false
+                        }
+                    }
+                }),
+            });
+
+            if (!response.ok) throw new Error('Failed to update second overtime member');
+            
+            await fetchLeaveRecords();
+        } catch (error) {
+            console.error('Error updating second overtime member:', error);
+            alert('更新第二位加班人員失敗，請稍後再試');
+        }
+    };
+
+    // 更新加班確認狀態
+    const handleUpdateOvertimeConfirm = async (record: LeaveRecord, isSecondMember: boolean = false) => {
+        try {
+            const response = await fetch('/api/leave', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    date: record.date,
+                    name: record.name,
+                    overtime: {
+                        ...record.overtime,
+                        ...(isSecondMember
+                            ? {
+                                secondMember: {
+                                    ...record.overtime.secondMember,
+                                    confirmed: !record.overtime.secondMember?.confirmed
+                                }
+                            }
+                            : {
+                                confirmed: !record.overtime.confirmed,
+                                firstConfirmed: !record.overtime.firstConfirmed
+                            })
+                    }
+                }),
+            });
+
+            if (!response.ok) throw new Error('Failed to update overtime confirmation');
+            
+            await fetchLeaveRecords();
+        } catch (error) {
+            console.error('Error updating overtime confirmation:', error);
+            alert('更新加班確認狀態失敗，請稍後再試');
+        }
+    };
+
+    // 更新請假確認狀態
+    const handleUpdateLeaveConfirm = async (record: LeaveRecord) => {
+        try {
+            const response = await fetch('/api/leave', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    date: record.date,
+                    name: record.name,
+                    confirmed: !record.confirmed
+                }),
+            });
+
+            if (!response.ok) throw new Error('Failed to update leave confirmation');
+            
+            await fetchLeaveRecords();
+        } catch (error) {
+            console.error('Error updating leave confirmation:', error);
+            alert('更新請假確認狀態失敗，請稍後再試');
+        }
+    };
+
+    // 刪除請假記錄
+    const handleDelete = async (record: LeaveRecord) => {
+        if (!confirm('確定要刪除這筆請假記錄嗎？')) return;
+
+        try {
+            const response = await fetch('/api/leave', {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    date: record.date,
+                    name: record.name
+                }),
+            });
+
+            if (!response.ok) throw new Error('Failed to delete leave record');
+            
+            await fetchLeaveRecords();
+        } catch (error) {
+            console.error('Error deleting leave record:', error);
+            alert('刪除請假記錄失敗，請稍後再試');
+        }
+    };
+
+    useEffect(() => {
+        fetchLeaveRecords();
+    }, [date]);
 
     return (
         <main className="min-h-screen bg-gray-100">
@@ -629,7 +629,7 @@ export default function LeaveDatePage() {
                                                     {isTodayOrFuture() && (
                                                         <div className="mt-2">
                                                             <button
-                                                                onClick={() => handleCancelLeave(record)}
+                                                                onClick={() => handleDelete(record)}
                                                                 className="px-3 py-1 text-sm font-medium text-red-600 bg-red-50 border border-red-200 rounded-md hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
                                                             >
                                                                 取消請假
@@ -727,7 +727,7 @@ export default function LeaveDatePage() {
                                                                     {record.overtime.name && !record.overtime.firstConfirmed && (
                                                                         <div className="mt-2">
                                                                             <button
-                                                                                onClick={() => handleConfirmOvertime(record, 'first')}
+                                                                                onClick={() => handleUpdateOvertimeConfirm(record, false)}
                                                                                 className="px-3 py-1 text-sm font-medium text-green-600 bg-green-50 border border-green-200 rounded-md hover:bg-green-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
                                                                             >
                                                                                 確認加班
@@ -737,7 +737,7 @@ export default function LeaveDatePage() {
                                                                     {record.overtime.name && record.overtime.firstConfirmed && (
                                                                         <div className="mt-2">
                                                                             <button
-                                                                                onClick={() => handleCancelOvertime(record, 'first')}
+                                                                                onClick={() => handleUpdateOvertimeConfirm(record, true)}
                                                                                 className="px-3 py-1 text-sm font-medium text-red-600 bg-red-50 border border-red-200 rounded-md hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
                                                                             >
                                                                                 取消加班
@@ -783,7 +783,7 @@ export default function LeaveDatePage() {
                                                                             {record.overtime.name && !record.overtime.firstConfirmed && (
                                                                                 <div className="mt-2">
                                                                                     <button
-                                                                                        onClick={() => handleConfirmOvertime(record, 'first')}
+                                                                                        onClick={() => handleUpdateOvertimeConfirm(record, false)}
                                                                                         className="px-3 py-1 text-sm font-medium text-green-600 bg-green-50 border border-green-200 rounded-md hover:bg-green-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
                                                                                     >
                                                                                         確認加班
@@ -793,7 +793,7 @@ export default function LeaveDatePage() {
                                                                             {record.overtime.name && record.overtime.firstConfirmed && (
                                                                                 <div className="mt-2">
                                                                                     <button
-                                                                                        onClick={() => handleCancelOvertime(record, 'first')}
+                                                                                        onClick={() => handleUpdateOvertimeConfirm(record, true)}
                                                                                         className="px-3 py-1 text-sm font-medium text-red-600 bg-red-50 border border-red-200 rounded-md hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
                                                                                     >
                                                                                         取消加班
@@ -836,7 +836,7 @@ export default function LeaveDatePage() {
                                                                             {record.overtime.secondMember?.name && !record.overtime.secondMember.confirmed && (
                                                                                 <div className="mt-2">
                                                                                     <button
-                                                                                        onClick={() => handleConfirmOvertime(record, 'second')}
+                                                                                        onClick={() => handleUpdateOvertimeConfirm(record, true)}
                                                                                         className="px-3 py-1 text-sm font-medium text-green-600 bg-green-50 border border-green-200 rounded-md hover:bg-green-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
                                                                                     >
                                                                                         確認加班
@@ -846,7 +846,7 @@ export default function LeaveDatePage() {
                                                                             {record.overtime.secondMember?.confirmed && (
                                                                                 <div className="mt-2">
                                                                                     <button
-                                                                                        onClick={() => handleCancelOvertime(record, 'second')}
+                                                                                        onClick={() => handleUpdateOvertimeConfirm(record, true)}
                                                                                         className="px-3 py-1 text-sm font-medium text-red-600 bg-red-50 border border-red-200 rounded-md hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
                                                                                     >
                                                                                         取消加班
