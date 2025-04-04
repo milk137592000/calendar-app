@@ -6,16 +6,36 @@ export async function GET(request: Request) {
     try {
         const { searchParams } = new URL(request.url);
         const date = searchParams.get('date');
-        
+        const year = searchParams.get('year');
+        const month = searchParams.get('month');
+
         await connectDB();
-        
-        const query = date ? { date } : {};
+
+        let query = {};
+        if (date) {
+            query = { date };
+        } else if (year && month) {
+            // 構建該月份的日期範圍
+            const startDate = `${year}-${month.padStart(2, '0')}-01`;
+            const lastDay = new Date(parseInt(year), parseInt(month), 0).getDate();
+            const endDate = `${year}-${month.padStart(2, '0')}-${lastDay}`;
+            
+            query = {
+                date: {
+                    $gte: startDate,
+                    $lte: endDate
+                }
+            };
+        }
+
         const records = await LeaveRecord.find(query).sort({ date: 1 });
-        
         return NextResponse.json(records);
     } catch (error) {
         console.error('Error fetching leave records:', error);
-        return NextResponse.json({ error: 'Failed to fetch leave records' }, { status: 500 });
+        return NextResponse.json(
+            { error: 'Failed to fetch leave records' },
+            { status: 500 }
+        );
     }
 }
 

@@ -65,7 +65,7 @@ export default function Calendar({
                     </button>
                     <h2 className="text-2xl font-bold text-gray-800">
                         {format(currentDate, 'yyyy年M月')}
-                        {selectedTeam && !isLeaveMode && ` · ${selectedTeam}班`}
+                        {selectedTeam && !isLeaveMode && ` · ${selectedTeam}`}
                         {isLeaveMode && ' · 請假'}
                     </h2>
                     <button

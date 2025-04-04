@@ -25,6 +25,7 @@ export interface ShiftEntry {
 export interface LeaveRecord {
     date: string;
     name: string;
+    confirmed?: boolean;
     overtime?: {
         type: 'bigRest' | 'regular';
         name: string;

@@ -69,13 +69,24 @@ export default function Home() {
     const [leaveRecords, setLeaveRecords] = useState<LeaveRecord[]>([]);
     const [userName, setUserName] = useState<string>('');
 
-    // 從 localStorage 讀取請假記錄
-    React.useEffect(() => {
-        const records = localStorage.getItem('leaveRecords');
-        if (records) {
-            setLeaveRecords(JSON.parse(records));
+    // 從 API 獲取請假記錄
+    const fetchLeaveRecords = async () => {
+        try {
+            const year = currentDate.getFullYear();
+            const month = currentDate.getMonth() + 1;
+            const response = await fetch(`/api/leave?year=${year}&month=${month}`);
+            if (!response.ok) throw new Error('Failed to fetch leave records');
+            const records = await response.json();
+            setLeaveRecords(records);
+        } catch (error) {
+            console.error('Error fetching leave records:', error);
         }
-    }, []);
+    };
+
+    // 在組件掛載時和日期變更時獲取請假記錄
+    React.useEffect(() => {
+        fetchLeaveRecords();
+    }, [currentDate]);
 
     const schedules = generateSchedules(
         currentDate.getFullYear(),

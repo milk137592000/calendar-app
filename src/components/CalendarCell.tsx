@@ -121,7 +121,7 @@ export default function CalendarCell({
                                     key={index}
                                     className={`text-xs p-1 rounded ${bgColor} ${textColor}`}
                                 >
-                                    {record.name} ({team}班 {shift})
+                                    {record.name} ({team} {shift})
                                 </div>
                             );
                         })}
@@ -136,7 +136,7 @@ export default function CalendarCell({
                                 color: SHIFT_STYLES[shift.type].textColor,
                             }}
                         >
-                            <span>{shift.team}班</span>
+                            <span>{shift.team}</span>
                             <span>{shift.type}</span>
                         </div>
                     ))
