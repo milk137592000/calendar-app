@@ -101,10 +101,8 @@ export default function Calendar({
                                 key={index}
                                 className={`
                                     aspect-square p-2 border rounded-lg cursor-pointer
-                                    ${daySchedule?.isHoliday ? 'bg-red-50' : ''}
-                                    ${bgColor}
-                                    ${isSameDay(day, new Date()) ? 'border-blue-500' : ''}
-                                    ${isSameDay(day, new Date()) ? 'bg-white' : 'bg-gray-50'}
+                                    bg-white
+                                    ${isSameDay(day, new Date()) ? 'border-red-500 border-2' : 'border-gray-200'}
                                     hover:bg-gray-50 transition-colors
                                 `}
                                 onClick={() => onToggleLeave(day)}

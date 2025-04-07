@@ -25,10 +25,13 @@ export const TEAMS: Record<string, Team> = {
             { name: '隆', role: '班長' },
             { name: '貓', role: '班長' },
             { name: '順', role: '班長' },
+            { name: '惟', role: '班員' },
             { name: '廷', role: '班員' },
             { name: '瑋', role: '班員' },
             { name: '獻', role: '班員' },
-            { name: '堃', role: '班員' }
+            { name: '堃', role: '班員' },
+            
+
         ]
     },
     'C': {
@@ -40,7 +43,8 @@ export const TEAMS: Record<string, Team> = {
             { name: '佳', role: '班員' },
             { name: '昌', role: '班員' },
             { name: '毅', role: '班員' },
-            { name: '鈞', role: '班員' }
+            { name: '鈞', role: '班員' },
+
         ]
     },
     'D': {
@@ -52,7 +56,8 @@ export const TEAMS: Record<string, Team> = {
             { name: '瑄', role: '班員' },
             { name: '科', role: '班員' },
             { name: '琮', role: '班員' },
-            { name: '翌', role: '班員' }
+            { name: '翌', role: '班員' },
+
         ]
     }
 }; 
