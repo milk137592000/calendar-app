@@ -115,15 +115,22 @@ const CalendarCell: React.FC<CalendarCellProps> = ({
                         )?.[0];
 
                         const shift = team ? getShiftForDate(team, formattedDate) : null;
-                        const isOvertimeComplete = record.overtime?.type === 'bigRest'
-                            ? record.overtime.firstConfirmed
-                            : record.overtime?.firstConfirmed && record.overtime?.secondMember?.confirmed;
+
+                        // Check for different overtime types
+                        const isOvertimeComplete = record.fullDayOvertime?.type === '加整班'
+                            ? record.fullDayOvertime.fullDayMember?.confirmed
+                            : record.fullDayOvertime?.type === '加一半' &&
+                            record.fullDayOvertime.firstHalfMember?.confirmed &&
+                            record.fullDayOvertime.secondHalfMember?.confirmed;
+
+                        // Check for custom overtime confirmation
+                        const hasConfirmedCustomOvertime = record.customOvertime?.confirmed;
 
                         return (
                             <div
                                 key={index}
-                                className={`text-xs p-1 rounded ${isOvertimeComplete
-                                        ? 'bg-gray-100 text-gray-700'
+                                className={`text-xs p-1 rounded ${hasConfirmedCustomOvertime || isOvertimeComplete
+                                        ? 'bg-gray-200 text-gray-700' // Light gray background for any confirmed overtime
                                         : getMemberRole(record.name) === '班長'
                                             ? 'bg-red-100 text-gray-700'
                                             : 'bg-blue-100 text-gray-700'

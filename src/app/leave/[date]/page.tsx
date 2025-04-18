@@ -573,24 +573,178 @@ const LeaveDatePage: React.FC = () => {
 
     // CustomOvertimeCard 組件 - 處理自定義時段請假情況
     const CustomOvertimeCard: React.FC<{ record: LeaveRecordType }> = ({ record }) => {
+        const [selectedMember, setSelectedMember] = useState('');
+
+        // 如果已經有加班記錄，顯示確認狀態
         const customOvertime = record.customOvertime;
-        if (!customOvertime || !customOvertime.name) return null;
+
+        // 獲取當前請假人員的班別
+        const leaveTeam = getMemberTeam(record.name);
+        const leaveRole = getMemberRole(record.name);
+
+        // 獲取可用的加班人員列表
+        const candidates = Object.entries(TEAMS)
+            .filter(([team]) => team !== leaveTeam)
+            .flatMap(([team, data]) => data.members.map(m => ({ ...m, team })));
+
+        // 班長請假，只能由其他班的班長加班
+        const availableCandidates = leaveRole === '班長'
+            ? candidates.filter(m => m.role === '班長')
+            : candidates;
+
+        // 處理加班人員選擇變更
+        const handleMemberChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+            setSelectedMember(e.target.value);
+        };
+
+        // 處理確認加班
+        const handleConfirmOvertime = async () => {
+            if (!selectedMember) {
+                alert('請選擇加班人員');
+                return;
+            }
+
+            try {
+                const selectedMemberData = availableCandidates.find(m => m.name === selectedMember);
+                if (!selectedMemberData) {
+                    alert('無法找到所選人員的資料');
+                    return;
+                }
+
+                // 獲取自定義時段
+                const customPeriod = record.period as CustomPeriod;
+
+                const response = await fetch('/api/leave', {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        date: record.date,
+                        name: record.name,
+                        customOvertime: {
+                            name: selectedMember,
+                            team: selectedMemberData.team,
+                            startTime: customPeriod.startTime,
+                            endTime: customPeriod.endTime,
+                            confirmed: true
+                        }
+                    }),
+                });
+
+                if (!response.ok) {
+                    throw new Error('更新加班信息失敗');
+                }
+
+                // 重新獲取請假記錄
+                await fetchLeaveRecords();
+                setSelectedMember('');
+            } catch (error) {
+                console.error('Error confirming overtime:', error);
+                alert('確認加班失敗');
+            }
+        };
+
+        if (customOvertime && customOvertime.name) {
+            return (
+                <div className="space-y-2">
+                    <h3 className="font-medium text-gray-800">加班資訊</h3>
+                    <div className="bg-green-50 border border-green-200 rounded-md p-3">
+                        <p className="text-gray-700">
+                            <span className="font-medium">加班人員：</span>
+                            {customOvertime.name} ({customOvertime.team}班)
+                        </p>
+                        <p className="text-gray-700">
+                            <span className="font-medium">加班時段：</span>
+                            {customOvertime.startTime} - {customOvertime.endTime}
+                        </p>
+                        <p className="text-gray-700">
+                            <span className="font-medium">狀態：</span>
+                            <span className={`${customOvertime.confirmed ? 'text-green-600' : 'text-amber-600'} font-medium`}>
+                                {customOvertime.confirmed ? '已確認' : '待確認'}
+                            </span>
+                        </p>
+                        {customOvertime.confirmed && (
+                            <button
+                                onClick={() => handleCancelOvertime(record)}
+                                className="mt-2 w-full px-3 py-1 text-sm font-medium text-white bg-red-500 rounded-md hover:bg-red-600"
+                            >
+                                取消加班
+                            </button>
+                        )}
+                    </div>
+                </div>
+            );
+        }
 
         return (
             <div className="space-y-2">
-                <h3 className="font-medium text-gray-800">加班資訊</h3>
-                <p className="text-gray-700">
-                    <span className="font-medium">加班人員：</span>
-                    {customOvertime.name}
-                </p>
-                {customOvertime.confirmed && (
-                    <button
-                        onClick={() => handleCancelOvertime(record)}
-                        className="w-full px-3 py-1 text-sm font-medium text-white bg-red-500 rounded-md hover:bg-red-600"
-                    >
-                        取消加班
-                    </button>
-                )}
+                <h3 className="font-medium text-gray-800">乙加班單（自定義時段）</h3>
+                <div className="p-3 bg-blue-50 border border-blue-200 rounded-md">
+                    <div className="space-y-4">
+                        {/* 加班人員選擇 */}
+                        <div>
+                            <label htmlFor="overtimeMember" className="block text-sm font-medium text-gray-700 mb-1">
+                                加班人員
+                            </label>
+                            <select
+                                id="overtimeMember"
+                                value={selectedMember}
+                                onChange={handleMemberChange}
+                                className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                            >
+                                <option value="">請選擇加班人員</option>
+                                {availableCandidates.length > 0 ? (
+                                    availableCandidates.map((member) => (
+                                        <option key={`${member.team}-${member.name}`} value={member.name}>
+                                            {member.name} ({member.role}, {member.team}班)
+                                        </option>
+                                    ))
+                                ) : (
+                                    <option value="" disabled>無可用加班人員</option>
+                                )}
+                            </select>
+                        </div>
+
+                        {/* 加班時段顯示 */}
+                        <div>
+                            <p className="text-sm text-gray-700">
+                                <span className="font-medium">加班時段：</span>
+                                {typeof record.period === 'object' && record.period.type === 'custom'
+                                    ? `${record.period.startTime} - ${record.period.endTime}`
+                                    : '未定義時段'}
+                            </p>
+                        </div>
+
+                        {/* 建議加班人員提示 */}
+                        {typeof record.period === 'object' && record.period.type === 'custom' && record.team && (
+                            <div className="p-2 bg-blue-50 rounded-md border border-blue-200">
+                                {(() => {
+                                    const suggestion = getCustomOvertimeSuggestions(
+                                        record.period.startTime,
+                                        record.period.endTime,
+                                        record.team
+                                    );
+                                    return suggestion.reason ? (
+                                        <p className="text-sm text-blue-600 font-medium">{suggestion.reason}</p>
+                                    ) : (
+                                        <p className="text-sm text-blue-600 font-medium">無特定加班建議</p>
+                                    );
+                                })()}
+                            </div>
+                        )}
+
+                        {/* 確認按鈕 */}
+                        <button
+                            onClick={handleConfirmOvertime}
+                            disabled={!selectedMember}
+                            className={`w-full px-3 py-2 text-sm font-medium text-white rounded-md
+                                ${selectedMember ? 'bg-blue-500 hover:bg-blue-600' : 'bg-gray-300 cursor-not-allowed'}`}
+                        >
+                            確認加班
+                        </button>
+                    </div>
+                </div>
             </div>
         );
     };
@@ -1117,7 +1271,8 @@ const LeaveDatePage: React.FC = () => {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    ...record,
+                    date: record.date,
+                    name: record.name,
                     customOvertime: {
                         name: '',
                         team: '',
@@ -1129,13 +1284,14 @@ const LeaveDatePage: React.FC = () => {
             });
 
             if (!response.ok) {
-                throw new Error('Failed to cancel overtime');
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to cancel overtime');
             }
 
             await fetchLeaveRecords();
         } catch (error) {
             console.error('Error canceling overtime:', error);
-            alert('取消加班失敗');
+            alert('取消加班失敗：' + (error instanceof Error ? error.message : '未知錯誤'));
         }
     };
 
