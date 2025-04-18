@@ -427,9 +427,9 @@ const LeaveDatePage: React.FC = () => {
                                             disabled={record.fullDayOvertime?.fullDayMember?.confirmed}
                                         >
                                             <option value="">請選擇加班人員</option>
-                                            {TEAMS[bigRestTeam]?.members.map((member: TeamMemberType) => (
-                                                <option key={member.name} value={member.name}>
-                                                    {member.name} ({member.role}, {bigRestTeam}班)
+                                            {getAvailableOvertimeMembers(record).map(member => (
+                                                <option key={`${member.team}-${member.name}`} value={member.name}>
+                                                    {member.name} ({member.role}, {member.team}班)
                                                 </option>
                                             ))}
                                         </select>
@@ -479,13 +479,11 @@ const LeaveDatePage: React.FC = () => {
                                                 disabled={record.fullDayOvertime?.firstHalfMember?.confirmed}
                                             >
                                                 <option value="">請選擇加前半人員</option>
-                                                {Object.entries(TEAMS).flatMap(([teamKey, teamData]) =>
-                                                    teamData.members.map(member => (
-                                                        <option key={`${teamKey}-${member.name}`} value={member.name}>
-                                                            {member.name} ({member.role}, {teamKey}班)
-                                                        </option>
-                                                    ))
-                                                )}
+                                                {getAvailableOvertimeMembers(record, 'first').map(member => (
+                                                    <option key={`${member.team}-${member.name}`} value={member.name}>
+                                                        {member.name} ({member.role}, {member.team}班)
+                                                    </option>
+                                                ))}
                                             </select>
 
                                             {record.fullDayOvertime?.firstHalfMember?.name && !record.fullDayOvertime?.firstHalfMember?.confirmed && (
@@ -524,13 +522,11 @@ const LeaveDatePage: React.FC = () => {
                                                 disabled={record.fullDayOvertime?.secondHalfMember?.confirmed}
                                             >
                                                 <option value="">請選擇加後半人員</option>
-                                                {Object.entries(TEAMS).flatMap(([teamKey, teamData]) =>
-                                                    teamData.members.map(member => (
-                                                        <option key={`${teamKey}-${member.name}`} value={member.name}>
-                                                            {member.name} ({member.role}, {teamKey}班)
-                                                        </option>
-                                                    ))
-                                                )}
+                                                {getAvailableOvertimeMembers(record, 'second').map(member => (
+                                                    <option key={`${member.team}-${member.name}`} value={member.name}>
+                                                        {member.name} ({member.role}, {member.team}班)
+                                                    </option>
+                                                ))}
                                             </select>
 
                                             {record.fullDayOvertime?.secondHalfMember?.name && !record.fullDayOvertime?.secondHalfMember?.confirmed && (
@@ -1212,31 +1208,36 @@ const LeaveDatePage: React.FC = () => {
         return { first: firstSuggestion, second: secondSuggestion };
     };
 
-    // 獲取可選擇的加班人員
-    const getAvailableOvertimeMembers = (record: LeaveRecordType) => {
-        const memberRole = getMemberRole(record.name);
-        const memberTeam = getMemberTeam(record.name);
-        const allMembers = Object.entries(TEAMS).flatMap(([team, teamData]) =>
-            teamData.members.map(member => ({
-                name: member.name,
-                team,
-                role: member.role
-            }))
-        );
+    // 根據 rule.md 加班限制，取得可選加班人員
+    const getAvailableOvertimeMembers = (record: LeaveRecordType, halfType?: 'first' | 'second') => {
+        const leaveMember = record.name;
+        const leaveTeam = getMemberTeam(leaveMember);
+        const leaveRole = getMemberRole(leaveMember);
+        const bigRestTeam = getBigRestTeam();
 
-        // 過濾掉請假人員和同班的人員
-        const availableMembers = allMembers.filter(member =>
-            member.name !== record.name && member.team !== memberTeam
-        );
+        // 取得所有其他班的成員
+        let candidates = Object.entries(TEAMS)
+            .filter(([team]) => team !== leaveTeam)
+            .flatMap(([team, data]) => data.members.map(m => ({ ...m, team })));
 
-        // 根據請假人員的角色過濾加班人員
-        if (memberRole === '班長') {
-            // 班長請假，只能由其他班級的班長加班
-            return availableMembers.filter(member => member.role === '班長');
-        } else {
-            // 班員請假，可以由其他班級的班長或班員加班
-            return availableMembers;
+        // 班長請假，只能由其他班的班長加班
+        if (leaveRole === '班長') {
+            candidates = candidates.filter(m => m.role === '班長');
         }
+        // 班員請假，其他班的班長班員都可以加班（已包含於 candidates）
+
+        // 加一半時，前後半不得同班（除非該班大休）
+        if (record.fullDayOvertime?.type === '加一半') {
+            const first = record.fullDayOvertime.firstHalfMember;
+            const second = record.fullDayOvertime.secondHalfMember;
+            if (halfType === 'first' && second && second.team !== bigRestTeam) {
+                candidates = candidates.filter(m => m.team !== second.team);
+            }
+            if (halfType === 'second' && first && first.team !== bigRestTeam) {
+                candidates = candidates.filter(m => m.team !== first.team);
+            }
+        }
+        return candidates;
     };
 
     // 獲取自定義時段的加班建議
@@ -1451,9 +1452,9 @@ const LeaveDatePage: React.FC = () => {
                                                                         disabled={record.fullDayOvertime?.fullDayMember?.confirmed}
                                                                     >
                                                                         <option value="">請選擇加班人員</option>
-                                                                        {TEAMS[bigRestTeam]?.members.map((member: TeamMemberType) => (
-                                                                            <option key={member.name} value={member.name}>
-                                                                                {member.name} ({member.role}, {bigRestTeam}班)
+                                                                        {getAvailableOvertimeMembers(record).map(member => (
+                                                                            <option key={`${member.team}-${member.name}`} value={member.name}>
+                                                                                {member.name} ({member.role}, {member.team}班)
                                                                             </option>
                                                                         ))}
                                                                     </select>
@@ -1503,13 +1504,11 @@ const LeaveDatePage: React.FC = () => {
                                                                             disabled={record.fullDayOvertime?.firstHalfMember?.confirmed}
                                                                         >
                                                                             <option value="">請選擇加前半人員</option>
-                                                                            {Object.entries(TEAMS).flatMap(([teamKey, teamData]) =>
-                                                                                teamData.members.map(member => (
-                                                                                    <option key={`${teamKey}-${member.name}`} value={member.name}>
-                                                                                        {member.name} ({member.role}, {teamKey}班)
-                                                                                    </option>
-                                                                                ))
-                                                                            )}
+                                                                            {getAvailableOvertimeMembers(record, 'first').map(member => (
+                                                                                <option key={`${member.team}-${member.name}`} value={member.name}>
+                                                                                    {member.name} ({member.role}, {member.team}班)
+                                                                                </option>
+                                                                            ))}
                                                                         </select>
 
                                                                         {record.fullDayOvertime?.firstHalfMember?.name && !record.fullDayOvertime?.firstHalfMember?.confirmed && (
@@ -1548,13 +1547,11 @@ const LeaveDatePage: React.FC = () => {
                                                                             disabled={record.fullDayOvertime?.secondHalfMember?.confirmed}
                                                                         >
                                                                             <option value="">請選擇加後半人員</option>
-                                                                            {Object.entries(TEAMS).flatMap(([teamKey, teamData]) =>
-                                                                                teamData.members.map(member => (
-                                                                                    <option key={`${teamKey}-${member.name}`} value={member.name}>
-                                                                                        {member.name} ({member.role}, {teamKey}班)
-                                                                                    </option>
-                                                                                ))
-                                                                            )}
+                                                                            {getAvailableOvertimeMembers(record, 'second').map(member => (
+                                                                                <option key={`${member.team}-${member.name}`} value={member.name}>
+                                                                                    {member.name} ({member.role}, {member.team}班)
+                                                                                </option>
+                                                                            ))}
                                                                         </select>
 
                                                                         {record.fullDayOvertime?.secondHalfMember?.name && !record.fullDayOvertime?.secondHalfMember?.confirmed && (
