@@ -26,17 +26,30 @@ export interface LeaveRecord {
     date: string;
     name: string;
     confirmed?: boolean;
-    overtime?: {
-        type: 'bigRest' | 'regular';
-        name: string;
-        team: string;
-        confirmed: boolean;
-        firstConfirmed?: boolean;
-        secondMember?: {
+    fullDayOvertime?: {
+        type: '加整班' | '加一半';
+        fullDayMember?: {
             name: string;
             team: string;
             confirmed: boolean;
         };
+        firstHalfMember?: {
+            name: string;
+            team: string;
+            confirmed: boolean;
+        };
+        secondHalfMember?: {
+            name: string;
+            team: string;
+            confirmed: boolean;
+        };
+    };
+    customOvertime?: {
+        name: string;
+        team: string;
+        startTime: string;
+        endTime: string;
+        confirmed: boolean;
     };
 }
 

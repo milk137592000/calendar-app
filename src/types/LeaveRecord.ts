@@ -4,19 +4,35 @@ export interface CustomPeriod {
     endTime: string;
 }
 
-export interface FullDayOvertime {
+export interface OvertimeMember {
+    name: string;
+    team: string;
+    confirmed: boolean;
+}
+
+// 舊版加班資料結構（向後兼容）
+export interface Overtime {
     type: '全天' | '半天';
     name: string;
     team: string;
     confirmed: boolean;
     firstConfirmed: boolean;
-    secondMember: {
+    secondMember?: {
         name: string;
         team: string;
         confirmed: boolean;
-    } | null;
+    };
 }
 
+// 甲加班單（對應全天假）
+export interface FullDayOvertime {
+    type: '加整班' | '加一半';
+    fullDayMember?: OvertimeMember;
+    firstHalfMember?: OvertimeMember;
+    secondHalfMember?: OvertimeMember;
+}
+
+// 乙加班單（對應自定義時段假）
 export interface CustomOvertime {
     name: string;
     team: string;
@@ -31,20 +47,10 @@ export interface LeaveRecord {
     name: string;
     team?: string;
     period: CustomPeriod | 'fullDay';
-    overtime?: {
-        type: '全天' | '半天';
-        name: string;
-        team: string;
-        confirmed: boolean;
-        firstConfirmed: boolean;
-        secondMember: {
-            name: string;
-            team: string;
-            confirmed: boolean;
-        } | null;
-    };
+    confirmed: boolean;
+    overtime?: Overtime;  // 舊版加班資料（向後兼容）
+    fullDayOvertime?: FullDayOvertime;
     customOvertime?: CustomOvertime;
-    confirmed?: boolean;
-    createdAt?: Date;
-    updatedAt?: Date;
+    createdAt?: string;
+    updatedAt?: string;
 } 
