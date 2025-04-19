@@ -457,6 +457,15 @@ const LeaveDatePage: React.FC = () => {
                                 <div className="space-y-4">
                                     {/* 前半加班人員 */}
                                     <div className="p-3 bg-green-50 rounded-md border border-green-200">
+                                        {(() => {
+                                            const team = getMemberTeam(record.name) || undefined;
+                                            const suggestions = getHalfDayOvertimeSuggestions(team, date);
+                                            return (
+                                                <div className="mb-2">
+                                                    <div className="mb-1 text-xs text-blue-700 font-semibold">加前半建議: {suggestions.firstHalf}</div>
+                                                </div>
+                                            );
+                                        })()}
                                         <div className="flex justify-between items-center mb-2">
                                             <h4 className="text-sm font-medium text-green-700">加前半</h4>
                                             {record.fullDayOvertime?.firstHalfMember?.confirmed && (
@@ -500,6 +509,15 @@ const LeaveDatePage: React.FC = () => {
 
                                     {/* 後半加班人員 */}
                                     <div className="p-3 bg-green-50 rounded-md border border-green-200">
+                                        {(() => {
+                                            const team = getMemberTeam(record.name) || undefined;
+                                            const suggestions = getHalfDayOvertimeSuggestions(team, date);
+                                            return (
+                                                <div className="mb-2">
+                                                    <div className="mb-1 text-xs text-blue-700 font-semibold">加後半建議: {suggestions.secondHalf}</div>
+                                                </div>
+                                            );
+                                        })()}
                                         <div className="flex justify-between items-center mb-2">
                                             <h4 className="text-sm font-medium text-green-700">加後半</h4>
                                             {record.fullDayOvertime?.secondHalfMember?.confirmed && (
@@ -671,7 +689,7 @@ const LeaveDatePage: React.FC = () => {
 
         return (
             <div className="space-y-2">
-                <h3 className="font-medium text-gray-800">乙加班單（自定義時段）</h3>
+                <h3 className="font-medium text-gray-800">自定義時段</h3>
                 <div className="p-3 bg-blue-50 border border-blue-200 rounded-md">
                     <div className="space-y-4">
                         {/* 加班人員選擇 */}
@@ -1392,8 +1410,12 @@ const LeaveDatePage: React.FC = () => {
         const shift = getTeamShift(team, date);
         if (!shift) return { suggestion: '', reason: '' };
 
-        const startTimeInt = parseInt(startTime);
-        const endTimeInt = parseInt(endTime);
+        // 確保時間格式一致 (把 "08:15" 轉換為 "0815")
+        const formattedStartTime = startTime.replace(':', '');
+        const formattedEndTime = endTime.replace(':', '');
+        
+        const startTimeInt = parseInt(formattedStartTime);
+        const endTimeInt = parseInt(formattedEndTime);
 
         // 獲取上一班和下一班的班級
         const previousShiftTeam = getTeamByShift(getPreviousShift(shift), true, date);
@@ -1404,7 +1426,7 @@ const LeaveDatePage: React.FC = () => {
         if (startTimeInt === previousShiftEndTime) {
             return {
                 suggestion: previousShiftTeam,
-                reason: `因請假起始時間(${formatTimeDisplay(startTime)})與上一班結束時間相同，建議由前一天${previousShiftTeam}班加班`
+                reason: `因請假起始時間(${formatTimeDisplay(formattedStartTime)})與上一班結束時間相同，建議由前一天${previousShiftTeam}班加班`
             };
         }
 
@@ -1413,7 +1435,7 @@ const LeaveDatePage: React.FC = () => {
         if (endTimeInt === nextShiftStartTime) {
             return {
                 suggestion: nextShiftTeam,
-                reason: `因請假結束時間(${formatTimeDisplay(endTime)})與下一班開始時間相同，建議由當天${nextShiftTeam}班加班`
+                reason: `因請假結束時間(${formatTimeDisplay(formattedEndTime)})與下一班開始時間相同，建議由當天${nextShiftTeam}班加班`
             };
         }
 
@@ -1635,6 +1657,15 @@ const LeaveDatePage: React.FC = () => {
                                                             <div className="space-y-4">
                                                                 {/* 前半加班人員 */}
                                                                 <div className="p-3 bg-green-50 rounded-md border border-green-200">
+                                                                    {(() => {
+                                                                        const team = getMemberTeam(record.name) || undefined;
+                                                                        const suggestions = getHalfDayOvertimeSuggestions(team, date);
+                                                                        return (
+                                                                            <div className="mb-2">
+                                                                                <div className="mb-1 text-xs text-blue-700 font-semibold">加前半建議: {suggestions.firstHalf}</div>
+                                                                            </div>
+                                                                        );
+                                                                    })()}
                                                                     <div className="flex justify-between items-center mb-2">
                                                                         <h4 className="text-sm font-medium text-green-700">加前半</h4>
                                                                         {record.fullDayOvertime?.firstHalfMember?.confirmed && (
@@ -1678,6 +1709,15 @@ const LeaveDatePage: React.FC = () => {
 
                                                                 {/* 後半加班人員 */}
                                                                 <div className="p-3 bg-green-50 rounded-md border border-green-200">
+                                                                    {(() => {
+                                                                        const team = getMemberTeam(record.name) || undefined;
+                                                                        const suggestions = getHalfDayOvertimeSuggestions(team, date);
+                                                                        return (
+                                                                            <div className="mb-2">
+                                                                                <div className="mb-1 text-xs text-blue-700 font-semibold">加後半建議: {suggestions.secondHalf}</div>
+                                                                            </div>
+                                                                        );
+                                                                    })()}
                                                                     <div className="flex justify-between items-center mb-2">
                                                                         <h4 className="text-sm font-medium text-green-700">加後半</h4>
                                                                         {record.fullDayOvertime?.secondHalfMember?.confirmed && (
