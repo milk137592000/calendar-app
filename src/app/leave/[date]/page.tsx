@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { format, isAfter, isToday, startOfDay, parse, addMinutes } from 'date-fns';
 import { useParams, useRouter } from 'next/navigation';
 import { TEAMS } from '@/data/teams';
-import { getShiftForDate, getMemberTeam, isTeamBigRestOnTuesday, findBigRestMembers, findRegularMembers, getMemberRole } from '@/utils/schedule';
+import { getShiftForDate, getMemberTeam, isTeamBigRestOnTuesday, findBigRestMembers, findRegularMembers, getMemberRole, TEAM_START_POSITIONS } from '@/utils/schedule';
 import type { ShiftType } from '@/types/schedule';
 import { LeaveRecord } from '@/models/LeaveRecord';
 import type { TeamMember } from '@/data/teams';
@@ -18,14 +18,6 @@ const SHIFT_CYCLE: ShiftType[] = [
     '小休',          // 第6天
     '夜班', '夜班'    // 第7-8天
 ];
-
-// 計算2025/04/01每個班別在循環中的位置
-const TEAM_START_POSITIONS: Record<string, number> = {
-    'A': 6,  // 4/1 是夜班第二天，所以 4/3 是大休
-    'B': 2,  // 4/1 是早班第二天，所以 4/7 是大休
-    'C': 4,  // 4/1 是中班第二天，所以 4/5 是大休
-    'D': 0   // 4/1 是大休，所以位置是 0
-};
 
 // 定義各班別的時段
 const SHIFT_TIME_RANGES = {

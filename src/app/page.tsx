@@ -5,6 +5,7 @@ import Calendar from '@/components/Calendar';
 import { DaySchedule, ShiftType, LeaveRecord, TEAMS } from '@/types/schedule';
 import { format } from 'date-fns';
 import { useRouter } from 'next/navigation';
+import { TEAM_START_POSITIONS } from '@/utils/schedule';
 
 // 模擬農曆日期
 const getLunarDate = (date: Date) => {
@@ -21,14 +22,6 @@ const SHIFT_CYCLE: ShiftType[] = [
     '夜班', '夜班'    // 第7-8天
 ];
 
-// 計算2025/04/01每個班別在循環中的位置
-const TEAM_START_POSITIONS: Record<string, number> = {
-    'A': 6,  // 4/1 是夜班第二天，所以 4/3 是大休
-    'B': 2,  // 4/1 是早班第二天，所以 4/7 是大休
-    'C': 4,  // 4/1 是中班第二天，所以 4/5 是大休
-    'D': 0   // 4/1 是大休，所以位置是 0
-};
-
 // 模擬排班數據生成器
 const generateSchedules = (year: number, month: number): DaySchedule[] => {
     const teams = ['A', 'B', 'C', 'D'] as const;
@@ -42,25 +35,18 @@ const generateSchedules = (year: number, month: number): DaySchedule[] => {
     for (let date = new Date(targetMonthStart); date <= targetMonthEnd; date = new Date(date.setDate(date.getDate() + 1))) {
         const daysDiff = Math.floor((date.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
 
-        const shifts = teams.map(team => {
+        const shifts: { [key: string]: ShiftType } = {};
+        teams.forEach(team => {
             const startPos = TEAM_START_POSITIONS[team];
-            if (!startPos) return null;
-
-            // 計算在 8 天循環中的位置
+            if (typeof startPos !== 'number') return;
             const cyclePosition = ((startPos + daysDiff) % 8 + 8) % 8;
-            const shiftType = SHIFT_CYCLE[cyclePosition];
-
-            return {
-                team,
-                type: shiftType,
-                date: new Date(date)
-            };
-        }).filter(Boolean);
-
+            shifts[team] = SHIFT_CYCLE[cyclePosition];
+        });
         schedules.push({
-            date: new Date(date),
-            shifts: shifts as any[], // TypeScript 類型轉換
-            lunarDate: getLunarDate(date)
+            date: format(date, 'yyyy-MM-dd'),
+            shifts: shifts as { A: ShiftType; B: ShiftType; C: ShiftType; D: ShiftType },
+            leaveRecords: [],
+            holidays: []
         });
     }
 
@@ -126,28 +112,11 @@ export default function Home() {
 
     // 獲取請假記錄的背景顏色
     const getLeaveRecordColor = (record: LeaveRecord) => {
-        if (!record.overtime) {
+        if (!record.fullDayOvertime && !record.customOvertime) {
             const role = getMemberRole(record.name);
             return role === '班長' ? 'bg-red-50' : 'bg-blue-50';
         }
-
-        // 檢查加班確認狀態
-        let isAllConfirmed = false;
-
-        if (record.overtime.type === 'bigRest') {
-            // 加整班：只需要 firstConfirmed 為 true
-            isAllConfirmed = Boolean(record.overtime.firstConfirmed);
-        } else {
-            // 加一半：需要第一位和第二位都確認
-            const firstConfirmed = Boolean(record.overtime.firstConfirmed);
-            const secondConfirmed = Boolean(record.overtime.secondMember?.confirmed);
-            isAllConfirmed = firstConfirmed && secondConfirmed;
-        }
-
-        if (isAllConfirmed) {
-            return 'bg-gray-100'; // 所有加班人員都已確認時顯示為淺灰色
-        }
-
+        // 你可以根據 fullDayOvertime 或 customOvertime 的確認狀態進一步自訂顏色
         const role = getMemberRole(record.name);
         return role === '班長' ? 'bg-red-50' : 'bg-blue-50';
     };

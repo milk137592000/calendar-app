@@ -91,7 +91,7 @@ export default function Calendar({
                     ))}
                     {days.map((day, index) => {
                         const daySchedule = schedules.find(s => 
-                            format(s.date, 'yyyy-MM-dd') === format(day, 'yyyy-MM-dd')
+                            s.date === format(day, 'yyyy-MM-dd')
                         );
                         const leaveRecord = leaveRecords.find(r => r.date === format(day, 'yyyy-MM-dd'));
                         const bgColor = leaveRecord ? getLeaveRecordColor(leaveRecord) : '';
@@ -109,9 +109,8 @@ export default function Calendar({
                             >
                                 <CalendarCell
                                     date={day}
-                                    shifts={daySchedule?.shifts || []}
+                                    shifts={daySchedule ? Object.entries(daySchedule.shifts).map(([team, type]) => ({ team, type })) : []}
                                     isToday={isSameDay(day, new Date())}
-                                    lunarDate={daySchedule?.lunarDate}
                                     selectedTeam={selectedTeam}
                                     isLeaveMode={isLeaveMode}
                                     leaveRecords={leaveRecords.filter(r => r.date === format(day, 'yyyy-MM-dd'))}
