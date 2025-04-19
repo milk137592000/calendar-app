@@ -16,10 +16,10 @@ const SHIFT_CYCLE: ShiftType[] = [
 
 // 計算2025/04/01每個班別在循環中的位置
 const TEAM_START_POSITIONS: Record<string, number> = {
-    'A': 6,  // 4/1 是夜班第二天，所以 4/3 是大休
+    'A': 0,  // 4/1 是大休，所以位置是 0
     'B': 2,  // 4/1 是早班第二天，所以 4/7 是大休
     'C': 4,  // 4/1 是中班第二天，所以 4/5 是大休
-    'D': 0   // 4/1 是大休，所以位置是 0
+    'D': 6   // 4/1 是夜班第二天，所以 4/3 是大休
 };
 
 export async function GET(request: Request) {
@@ -180,7 +180,7 @@ export async function POST(request: Request) {
                         type: '加整班',
                         fullDayMember: {
                             name: fullDayOvertime.fullDayMember.name,
-                            team: team || '',
+                            team: fullDayOvertime.fullDayMember.team,
                             confirmed: false
                         }
                     };
@@ -190,12 +190,12 @@ export async function POST(request: Request) {
                         type: '加一半',
                         firstHalfMember: fullDayOvertime.firstHalfMember ? {
                             name: fullDayOvertime.firstHalfMember.name,
-                            team: team || '',
+                            team: fullDayOvertime.firstHalfMember.team,
                             confirmed: false
                         } : undefined,
                         secondHalfMember: fullDayOvertime.secondHalfMember ? {
                             name: fullDayOvertime.secondHalfMember.name,
-                            team: team || '',
+                            team: fullDayOvertime.secondHalfMember.team,
                             confirmed: false
                         } : undefined
                     };

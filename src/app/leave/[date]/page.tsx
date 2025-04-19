@@ -1103,49 +1103,37 @@ const LeaveDatePage: React.FC = () => {
         // 如果清除了加班类型，直接返回，不发送更新请求
         if (!type) return;
 
-        // 准备加班数据，保留现有的加班人员信息
-        let overtimeData: FullDayOvertimeType;
-
-        if (type === '加整班') {
-            // 当切换到加整班时，移除加一半的信息
-            overtimeData = {
-                type: '加整班',
-                fullDayMember: undefined
-            };
-        } else {
-            // 当切换到加一半时，保留现有的前半和后半加班人员信息
-            overtimeData = {
+        // 只有加一半時才立即送出 PUT 請求，選加整班時等選人再送出
+        if (type === '加一半') {
+            // 當切換到加一半時，保留現有的前半和後半加班人員信息
+            const overtimeData: FullDayOvertimeType = {
                 type: '加一半',
                 firstHalfMember: record.fullDayOvertime?.type === '加一半' ? record.fullDayOvertime.firstHalfMember : undefined,
                 secondHalfMember: record.fullDayOvertime?.type === '加一半' ? record.fullDayOvertime.secondHalfMember : undefined
             };
-        }
-
-        try {
-            // 向后端发送更新请求
-            const response = await fetch('/api/leave', {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    date: record.date,
-                    name: record.name,
-                    fullDayOvertime: overtimeData
-                }),
-            });
-
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error || 'Failed to update overtime type');
+            try {
+                const response = await fetch('/api/leave', {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        date: record.date,
+                        name: record.name,
+                        fullDayOvertime: overtimeData
+                    }),
+                });
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'Failed to update overtime type');
+                }
+                await fetchLeaveRecords();
+            } catch (error) {
+                console.error('Error updating overtime type:', error);
+                alert('更新加班類型失敗：' + (error instanceof Error ? error.message : '未知錯誤'));
             }
-
-            // 刷新数据，确保前端状态与后端一致
-            await fetchLeaveRecords();
-        } catch (error) {
-            console.error('Error updating overtime type:', error);
-            alert('更新加班類型失敗：' + (error instanceof Error ? error.message : '未知錯誤'));
         }
+        // 加整班不做任何 API 請求，等選人
     };
 
     // 更新加班人員
@@ -1170,6 +1158,7 @@ const LeaveDatePage: React.FC = () => {
         }
 
         const memberTeam = getMemberTeam(memberName);
+        const bigRestTeam = getBigRestTeam();
         if (!memberTeam) {
             console.error('Could not find team for member:', memberName);
             return;
@@ -1177,7 +1166,7 @@ const LeaveDatePage: React.FC = () => {
 
         const overtimeMember: OvertimeMemberType = {
             name: memberName,
-            team: memberTeam,
+            team: (currentState.selectedType === '加整班' && bigRestTeam) ? bigRestTeam : memberTeam,
             confirmed: false
         };
 
@@ -1362,6 +1351,14 @@ const LeaveDatePage: React.FC = () => {
         const leaveTeam = getMemberTeam(leaveMember);
         const leaveRole = getMemberRole(leaveMember);
         const bigRestTeam = getBigRestTeam();
+        const selectedType = overtimeStates[record._id || '']?.selectedType;
+
+        // 加整班時，只能選大休班級且 role=班長 的成員
+        if (selectedType === '加整班' && bigRestTeam) {
+            return TEAMS[bigRestTeam].members
+                .filter(m => m.role === '班長')
+                .map(m => ({ ...m, team: bigRestTeam }));
+        }
 
         // 取得所有其他班的成員
         let candidates = Object.entries(TEAMS)
