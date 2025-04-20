@@ -1357,8 +1357,10 @@ const LeaveDatePage: React.FC = () => {
         // 班長請假，只能由其他班的班長加班
         if (leaveRole === '班長') {
             candidates = candidates.filter(m => m.role === '班長');
+        } else {
+            // 班員請假，其他班的班長班員都可以加班
+            candidates = candidates.filter(m => m.role === '班長' || m.role === '班員');
         }
-        // 班員請假，其他班的班長班員都可以加班（已包含於 candidates）
 
         // 加一半時，前後半不得同班且不得同人（除非該班大休）
         if (record.fullDayOvertime?.type === '加一半') {
