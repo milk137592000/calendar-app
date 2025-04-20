@@ -74,38 +74,73 @@ const CalendarCell: React.FC<CalendarCellProps> = ({
 
     return (
         <div
-            className={`
-                relative min-h-[70px] p-1 sm:p-2 border border-gray-200 rounded-xl bg-white
-                flex flex-col items-center justify-start gap-1 text-center
-                ${isToday ? 'border-blue-500' : ''}
-                cursor-pointer hover:bg-gray-50
-            `}
+            className={`relative p-2 h-32 border border-gray-200 ${isToday ? 'border-blue-500' : ''
+                } cursor-pointer hover:bg-gray-50`}
             onClick={handleClick}
         >
-            <div className="text-xs font-bold text-gray-700">{format(date, 'd', { locale: zhTW })}</div>
-            {isSaturday && deficits.length > 0 && (
-                <div className="text-[10px] bg-orange-100 text-orange-700 rounded-full px-2 py-0.5">{deficits.join('、')}</div>
-            )}
-            <div className="flex flex-col items-center gap-1 w-full mt-1">
-                {!isLeaveMode ? (
-                    selectedTeam && currentTeamShiftType ? (
-                        <span className={`text-xs px-2 py-0.5 rounded-full ${getShiftStyle(currentTeamShiftType)}`}>{currentTeamShiftType}</span>
-                    ) : (
-                        Object.entries(shifts).map(([team, type], idx) => (
-                            <span key={idx} className={`text-[10px] px-2 py-0.5 rounded-full ${getShiftStyle(type)}`}>{team}: {type}</span>
-                        ))
-                    )
-                ) : (
-                    dayLeaveRecords.map((record, idx) => (
-                        <span
-                            key={idx}
-                            className={`text-xs px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-800 font-medium`}
-                        >
-                            {record.name} {getMemberRole(record.name) === '班長' ? '(班長)' : ''}
-                        </span>
-                    ))
+            <div className="text-sm font-medium flex justify-between items-center">
+                <span>{format(date, 'd', { locale: zhTW })}</span>
+                {isSaturday && deficits.length > 0 && (
+                    <div className="text-[9px] bg-amber-800 text-white rounded-full px-2 py-0.5 whitespace-nowrap">
+                        {deficits.map(d => d && d.replace('差額', '差')).join('、')}
+                    </div>
                 )}
             </div>
+
+            {/* 顯示班別 */}
+            {!isLeaveMode && (
+                <div className="mt-2">
+                    {selectedTeam ? (
+                        currentTeamShiftType && (
+                            <div className={`text-sm px-2 py-1 rounded ${getShiftStyle(currentTeamShiftType)}`}>{currentTeamShiftType}</div>
+                        )
+                    ) : (
+                        <div className="space-y-1">
+                            {Object.entries(shifts).map(([team, type], index) => (
+                                <div key={index} className={`text-xs px-2 py-1 rounded ${getShiftStyle(type)}`}>{team}: {type}</div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {/* 顯示請假記錄 */}
+            {isLeaveMode && dayLeaveRecords.length > 0 && (
+                <div className="flex flex-col justify-center items-center gap-1 w-full mt-1">
+                    {dayLeaveRecords.map((record, idx) => {
+                        // 判斷加班是否已確認
+                        const isOvertimeComplete = record.fullDayOvertime?.type === '加整班'
+                            ? record.fullDayOvertime.fullDayMember?.confirmed
+                            : record.fullDayOvertime?.type === '加一半' &&
+                              record.fullDayOvertime.firstHalfMember?.confirmed &&
+                              record.fullDayOvertime.secondHalfMember?.confirmed;
+                        const hasConfirmedCustomOvertime = record.customOvertime?.confirmed;
+                        const isConfirmed = isOvertimeComplete || hasConfirmedCustomOvertime;
+                        // 判斷班長/班員顏色
+                        const role = getMemberRole(record.name);
+                        let tagClass = '';
+                        if (isConfirmed) {
+                            tagClass = 'bg-gray-200 text-gray-500';
+                        } else if (role === '班長') {
+                            tagClass = 'bg-red-100 text-red-700';
+                        } else {
+                            tagClass = 'bg-blue-100 text-blue-700';
+                        }
+                        // 找出 team
+                        const team = Object.entries(TEAMS).find(([_, teamData]) =>
+                            teamData.members.some(member => member.name === record.name)
+                        )?.[0] || '';
+                        return (
+                            <span
+                                key={idx}
+                                className={`text-[9px] px-2 py-0.5 rounded-full font-medium whitespace-nowrap ${tagClass}`}
+                            >
+                                {record.name}<span className="text-[8px] align-middle">{team}</span>
+                            </span>
+                        );
+                    })}
+                </div>
+            )}
         </div>
     );
 };
