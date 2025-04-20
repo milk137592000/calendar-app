@@ -570,10 +570,10 @@ const LeaveDatePage: React.FC = () => {
             <div className="space-y-4 p-4 bg-green-50 rounded-md border border-green-200">
                 <h3 className="text-green-800 font-medium">全天請假加班安排</h3>
                 <div className="mt-2 space-y-2">
-                    <p className="text-sm text-green-600">
+                    <p className="text-xs text-green-600 whitespace-nowrap">
                         加班人員: {customOvertime.name} ({customOvertime.team}班)
                     </p>
-                    <p className="text-sm text-green-600">
+                    <p className="text-xs text-green-600 whitespace-nowrap">
                         加班時段: {overtimeStates[record._id || '']?.selectedType}
                     </p>
                 </div>
@@ -718,7 +718,7 @@ const LeaveDatePage: React.FC = () => {
 
                         {/* 加班時段顯示 */}
                         <div>
-                            <p className="text-sm text-gray-700">
+                            <p className="text-xs text-gray-700 whitespace-nowrap">
                                 <span className="font-medium">加班時段：</span>
                                 {typeof record.period === 'object' && record.period.type === 'custom'
                                     ? `${record.period.startTime} - ${record.period.endTime}`
@@ -1501,7 +1501,7 @@ const LeaveDatePage: React.FC = () => {
                                             <span className="font-medium">當天班別：</span>
                                             {team ? getTeamShift(team, date) || '未排班' : '未知'}
                                         </p>
-                                        <p className="text-gray-700">
+                                        <p className="text-xs text-gray-700 whitespace-nowrap">
                                             <span className="font-medium">請假時段：</span>
                                             {record.period === 'fullDay' ? '一整天' :
                                                 typeof record.period === 'object' && record.period !== null ?
