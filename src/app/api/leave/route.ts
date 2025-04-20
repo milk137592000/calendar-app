@@ -552,17 +552,26 @@ export async function PUT(request: Request) {
 
                 // 只有查到的 existingOvertime 不是自己時才報錯
                 if (existingOvertime && existingOvertime._id.toString() !== record._id.toString()) {
-                    if (fullDayOvertime.type === '加整班') {
-                        return NextResponse.json(
-                            { error: '該人員已經有加班記錄，大休班級人員最多可以加一個整班和一個半班' },
-                            { status: 400 }
-                        );
-                    } else {
-                        return NextResponse.json(
-                            { error: '該人員已經有加班記錄，非大休班級人員最多只能加一個半班' },
-                            { status: 400 }
-                        );
+                    // 只有非大休班級才限制只能加一個半班
+                    const isMemberBigRest = await checkIfBigRestTeam(
+                        fullDayOvertime.fullDayMember?.team ||
+                        fullDayOvertime.firstHalfMember?.team ||
+                        fullDayOvertime.secondHalfMember?.team || '', date
+                    );
+                    if (!isMemberBigRest) {
+                        if (fullDayOvertime.type === '加整班') {
+                            return NextResponse.json(
+                                { error: '該人員已經有加班記錄，大休班級人員最多可以加一個整班和一個半班' },
+                                { status: 400 }
+                            );
+                        } else {
+                            return NextResponse.json(
+                                { error: '該人員已經有加班記錄，非大休班級人員最多只能加一個半班' },
+                                { status: 400 }
+                            );
+                        }
                     }
+                    // 大休班級成員不受此限制
                 }
 
                 // 更新加班資訊
