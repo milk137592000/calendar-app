@@ -1344,9 +1344,17 @@ const LeaveDatePage: React.FC = () => {
 
         // 加整班時，只能選大休班級且 role=班長 的成員
         if (selectedType === '加整班' && bigRestTeam) {
-            return TEAMS[bigRestTeam].members
-                .filter(m => m.role === '班長')
-                .map(m => ({ ...m, team: bigRestTeam }));
+            if (leaveRole === '班長') {
+                // 請假人員是班長，只能班長加班
+                return TEAMS[bigRestTeam].members
+                    .filter(m => m.role === '班長')
+                    .map(m => ({ ...m, team: bigRestTeam }));
+            } else {
+                // 請假人員是班員，班長和班員都可以加班
+                return TEAMS[bigRestTeam].members
+                    .filter(m => m.role === '班長' || m.role === '班員')
+                    .map(m => ({ ...m, team: bigRestTeam }));
+            }
         }
 
         // 取得所有其他班的成員
@@ -1373,6 +1381,7 @@ const LeaveDatePage: React.FC = () => {
                 candidates = candidates.filter(m => m.team !== first.team && m.name !== first.name);
             }
         }
+        console.log('getAvailableOvertimeMembers', { leaveRole, candidates });
         return candidates;
     };
 
