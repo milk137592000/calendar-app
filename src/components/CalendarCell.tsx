@@ -53,7 +53,7 @@ const CalendarCell: React.FC<CalendarCellProps> = ({
     };
 
     // 獲取當前選擇班級的班別
-    const currentTeamShift = shifts.find(shift => shift.team === selectedTeam);
+    const currentTeamShiftType = selectedTeam ? shifts[selectedTeam as keyof typeof shifts] : undefined;
 
     // 獲取班別的樣式
     const getShiftStyle = (shiftType: string) => {
@@ -74,78 +74,38 @@ const CalendarCell: React.FC<CalendarCellProps> = ({
 
     return (
         <div
-            className={`relative p-2 h-32 border border-gray-200 ${isToday ? 'border-blue-500' : ''
-                } cursor-pointer hover:bg-gray-50`}
+            className={`
+                relative min-h-[70px] p-1 sm:p-2 border border-gray-200 rounded-xl bg-white
+                flex flex-col items-center justify-start gap-1 text-center
+                ${isToday ? 'border-blue-500' : ''}
+                cursor-pointer hover:bg-gray-50
+            `}
             onClick={handleClick}
         >
-            <div className="text-sm font-medium flex justify-between items-center">
-                <span>{format(date, 'd', { locale: zhTW })}</span>
-                {isSaturday && deficits.length > 0 && (
-                    <span className="text-yellow-700">{deficits.join('、')}</span>
+            <div className="text-xs font-bold text-gray-700">{format(date, 'd', { locale: zhTW })}</div>
+            {isSaturday && deficits.length > 0 && (
+                <div className="text-[10px] bg-orange-100 text-orange-700 rounded-full px-2 py-0.5">{deficits.join('、')}</div>
+            )}
+            <div className="flex flex-col items-center gap-1 w-full mt-1">
+                {!isLeaveMode ? (
+                    selectedTeam && currentTeamShiftType ? (
+                        <span className={`text-xs px-2 py-0.5 rounded-full ${getShiftStyle(currentTeamShiftType)}`}>{currentTeamShiftType}</span>
+                    ) : (
+                        Object.entries(shifts).map(([team, type], idx) => (
+                            <span key={idx} className={`text-[10px] px-2 py-0.5 rounded-full ${getShiftStyle(type)}`}>{team}: {type}</span>
+                        ))
+                    )
+                ) : (
+                    dayLeaveRecords.map((record, idx) => (
+                        <span
+                            key={idx}
+                            className={`text-xs px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-800 font-medium`}
+                        >
+                            {record.name} {getMemberRole(record.name) === '班長' ? '(班長)' : ''}
+                        </span>
+                    ))
                 )}
             </div>
-
-            {/* 顯示班別 */}
-            {!isLeaveMode && (
-                <div className="mt-2">
-                    {selectedTeam ? (
-                        currentTeamShift && (
-                            <div className={`text-sm px-2 py-1 rounded ${getShiftStyle(currentTeamShift.type)}`}>
-                                {currentTeamShift.type}
-                            </div>
-                        )
-                    ) : (
-                        <div className="space-y-1">
-                            {shifts.map((shift, index) => (
-                                <div key={index} className={`text-xs px-2 py-1 rounded ${getShiftStyle(shift.type)}`}>
-                                    {shift.team}: {shift.type}
-                                </div>
-                            ))}
-                        </div>
-                    )}
-                </div>
-            )}
-
-            {/* 顯示請假記錄 */}
-            {isLeaveMode && dayLeaveRecords.length > 0 && (
-                <div className="mt-2 space-y-1">
-                    {dayLeaveRecords.map((record, index) => {
-                        const team = Object.entries(TEAMS).find(([_, teamData]) =>
-                            teamData.members.some(member => member.name === record.name)
-                        )?.[0];
-
-                        const shift = team ? getShiftForDate(team, formattedDate) : null;
-
-                        // Check for different overtime types
-                        const isOvertimeComplete = record.fullDayOvertime?.type === '加整班'
-                            ? record.fullDayOvertime.fullDayMember?.confirmed
-                            : record.fullDayOvertime?.type === '加一半' &&
-                            record.fullDayOvertime.firstHalfMember?.confirmed &&
-                            record.fullDayOvertime.secondHalfMember?.confirmed;
-
-                        // Check for custom overtime confirmation
-                        const hasConfirmedCustomOvertime = record.customOvertime?.confirmed;
-
-                        return (
-                            <div
-                                key={index}
-                                className={`text-xs p-1 rounded ${hasConfirmedCustomOvertime || isOvertimeComplete
-                                        ? 'bg-gray-200 text-gray-700' // Light gray background for any confirmed overtime
-                                        : getMemberRole(record.name) === '班長'
-                                            ? 'bg-red-100 text-gray-700'
-                                            : 'bg-blue-100 text-gray-700'
-                                    }`}
-                            >
-                                <div className="flex items-center space-x-1">
-                                    <span className="font-bold">{record.name}</span>
-                                    {team && <span>{team}</span>}
-                                    {shift && <span>{shift.replace('班', '')}</span>}
-                                </div>
-                            </div>
-                        );
-                    })}
-                </div>
-            )}
         </div>
     );
 };
