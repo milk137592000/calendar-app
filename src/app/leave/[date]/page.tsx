@@ -411,11 +411,11 @@ const LeaveDatePage: React.FC = () => {
                             {/* 加班人員選擇 - 加整班 */}
                             {overtimeStates[record._id || '']?.selectedType === '加整班' && bigRestTeam && (
                                 <div className="space-y-2">
-                                    <div className="flex items-center gap-2">
+                                    <div className="flex flex-col gap-1">
                                         <select
                                             value={overtimeStates[record._id || '']?.selectedMember || (record.fullDayOvertime?.fullDayMember ? record.fullDayOvertime.fullDayMember.name : '')}
                                             onChange={(e) => handleOvertimeMemberChange(record, e.target.value)}
-                                            className="flex-1 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                                            className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
                                             disabled={record.fullDayOvertime?.fullDayMember?.confirmed}
                                         >
                                             <option value="">請選擇加班人員</option>
@@ -429,7 +429,7 @@ const LeaveDatePage: React.FC = () => {
                                         {(overtimeStates[record._id || '']?.selectedMember || record.fullDayOvertime?.fullDayMember?.name) && !record.fullDayOvertime?.fullDayMember?.confirmed && (
                                             <button
                                                 onClick={() => handleUpdateOvertimeConfirm(record, true)}
-                                                className="px-3 py-2 text-sm font-medium text-white bg-green-500 rounded-md hover:bg-green-600"
+                                                className="w-full sm:w-auto mt-2 sm:mt-0 px-2 py-1 text-xs font-medium text-white bg-green-500 rounded-md hover:bg-green-600 whitespace-nowrap"
                                             >
                                                 確認加班
                                             </button>
@@ -438,7 +438,7 @@ const LeaveDatePage: React.FC = () => {
                                         {record.fullDayOvertime?.fullDayMember?.confirmed && (
                                             <button
                                                 onClick={() => handleUpdateOvertimeConfirm(record, false)}
-                                                className="px-3 py-2 text-sm font-medium text-white bg-red-500 rounded-md hover:bg-red-600"
+                                                className="w-full sm:w-auto mt-2 sm:mt-0 px-2 py-1 text-xs font-medium text-white bg-red-500 rounded-md hover:bg-red-600 whitespace-nowrap"
                                             >
                                                 取消加班
                                             </button>
@@ -472,11 +472,11 @@ const LeaveDatePage: React.FC = () => {
                                                 <span className="px-2 py-1 text-xs font-medium text-white bg-green-500 rounded-full">已確認</span>
                                             )}
                                         </div>
-                                        <div className="flex items-center gap-2">
+                                        <div className="flex flex-col gap-1">
                                             <select
                                                 value={record.fullDayOvertime?.firstHalfMember?.name || ''}
                                                 onChange={(e) => handleOvertimeMemberChange(record, e.target.value, 'first')}
-                                                className="flex-1 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                                                className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
                                                 disabled={record.fullDayOvertime?.firstHalfMember?.confirmed}
                                             >
                                                 <option value="">請選擇加前半人員</option>
@@ -490,7 +490,7 @@ const LeaveDatePage: React.FC = () => {
                                             {record.fullDayOvertime?.firstHalfMember?.name && !record.fullDayOvertime?.firstHalfMember?.confirmed && (
                                                 <button
                                                     onClick={() => handleUpdateOvertimeConfirm(record, true, 'first')}
-                                                    className="px-3 py-2 text-sm font-medium text-white bg-green-500 rounded-md hover:bg-green-600"
+                                                    className="w-full sm:w-auto mt-2 sm:mt-0 px-2 py-1 text-xs font-medium text-white bg-green-500 rounded-md hover:bg-green-600 whitespace-nowrap"
                                                 >
                                                     確認前半加班
                                                 </button>
@@ -499,7 +499,7 @@ const LeaveDatePage: React.FC = () => {
                                             {record.fullDayOvertime?.firstHalfMember?.confirmed && (
                                                 <button
                                                     onClick={() => handleUpdateOvertimeConfirm(record, false, 'first')}
-                                                    className="px-3 py-2 text-sm font-medium text-white bg-red-500 rounded-md hover:bg-red-600"
+                                                    className="w-full sm:w-auto mt-2 sm:mt-0 px-2 py-1 text-xs font-medium text-white bg-red-500 rounded-md hover:bg-red-600 whitespace-nowrap"
                                                 >
                                                     取消前半加班
                                                 </button>
@@ -524,11 +524,11 @@ const LeaveDatePage: React.FC = () => {
                                                 <span className="px-2 py-1 text-xs font-medium text-white bg-green-500 rounded-full">已確認</span>
                                             )}
                                         </div>
-                                        <div className="flex items-center gap-2">
+                                        <div className="flex flex-col gap-1">
                                             <select
                                                 value={record.fullDayOvertime?.secondHalfMember?.name || ''}
                                                 onChange={(e) => handleOvertimeMemberChange(record, e.target.value, 'second')}
-                                                className="flex-1 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                                                className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
                                                 disabled={record.fullDayOvertime?.secondHalfMember?.confirmed}
                                             >
                                                 <option value="">請選擇加後半人員</option>
@@ -542,7 +542,7 @@ const LeaveDatePage: React.FC = () => {
                                             {record.fullDayOvertime?.secondHalfMember?.name && !record.fullDayOvertime?.secondHalfMember?.confirmed && (
                                                 <button
                                                     onClick={() => handleUpdateOvertimeConfirm(record, true, 'second')}
-                                                    className="px-3 py-2 text-sm font-medium text-white bg-green-500 rounded-md hover:bg-green-600"
+                                                    className="w-full sm:w-auto mt-2 sm:mt-0 px-2 py-1 text-xs font-medium text-white bg-green-500 rounded-md hover:bg-green-600 whitespace-nowrap"
                                                 >
                                                     確認後半加班
                                                 </button>
@@ -551,7 +551,7 @@ const LeaveDatePage: React.FC = () => {
                                             {record.fullDayOvertime?.secondHalfMember?.confirmed && (
                                                 <button
                                                     onClick={() => handleUpdateOvertimeConfirm(record, false, 'second')}
-                                                    className="px-3 py-2 text-sm font-medium text-white bg-red-500 rounded-md hover:bg-red-600"
+                                                    className="w-full sm:w-auto mt-2 sm:mt-0 px-2 py-1 text-xs font-medium text-white bg-red-500 rounded-md hover:bg-red-600 whitespace-nowrap"
                                                 >
                                                     取消後半加班
                                                 </button>
@@ -701,7 +701,7 @@ const LeaveDatePage: React.FC = () => {
                                 id="overtimeMember"
                                 value={selectedMember}
                                 onChange={handleMemberChange}
-                                className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                                className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
                             >
                                 <option value="">請選擇加班人員</option>
                                 {availableCandidates.length > 0 ? (
@@ -1121,37 +1121,8 @@ const LeaveDatePage: React.FC = () => {
         // 如果清除了加班类型，直接返回，不发送更新请求
         if (!type) return;
 
-        // 只有加一半時才立即送出 PUT 請求，選加整班時等選人再送出
-        if (type === '加一半') {
-            // 當切換到加一半時，保留現有的前半和後半加班人員信息
-            const overtimeData: FullDayOvertimeType = {
-                type: '加一半',
-                firstHalfMember: record.fullDayOvertime?.type === '加一半' ? record.fullDayOvertime.firstHalfMember : undefined,
-                secondHalfMember: record.fullDayOvertime?.type === '加一半' ? record.fullDayOvertime.secondHalfMember : undefined
-            };
-            try {
-                const response = await fetch('/api/leave', {
-                    method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        date: record.date,
-                        name: record.name,
-                        fullDayOvertime: overtimeData
-                    }),
-                });
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.error || 'Failed to update overtime type');
-                }
-                await fetchLeaveRecords();
-            } catch (error) {
-                console.error('Error updating overtime type:', error);
-                alert('更新加班類型失敗：' + (error instanceof Error ? error.message : '未知錯誤'));
-            }
-        }
-        // 加整班不做任何 API 請求，等選人
+        // 只在"加整班"時等選人再送出，選"加一半"時不送出 PUT 請求
+        // 原本這裡有自動送出 PUT 請求的邏輯，已移除
     };
 
     // 更新加班人員
@@ -1389,15 +1360,15 @@ const LeaveDatePage: React.FC = () => {
         }
         // 班員請假，其他班的班長班員都可以加班（已包含於 candidates）
 
-        // 加一半時，前後半不得同班（除非該班大休）
+        // 加一半時，前後半不得同班且不得同人（除非該班大休）
         if (record.fullDayOvertime?.type === '加一半') {
             const first = record.fullDayOvertime.firstHalfMember;
             const second = record.fullDayOvertime.secondHalfMember;
             if (halfType === 'first' && second && second.team !== bigRestTeam) {
-                candidates = candidates.filter(m => m.team !== second.team);
+                candidates = candidates.filter(m => m.team !== second.team && m.name !== second.name);
             }
             if (halfType === 'second' && first && first.team !== bigRestTeam) {
-                candidates = candidates.filter(m => m.team !== first.team);
+                candidates = candidates.filter(m => m.team !== first.team && m.name !== first.name);
             }
         }
         return candidates;
@@ -1507,7 +1478,7 @@ const LeaveDatePage: React.FC = () => {
         return (
             <div className="mt-8">
                 <h2 className="text-lg font-semibold text-gray-800 mb-4">當日請假記錄</h2>
-                <div className="space-y-4">
+                <div className="space-y-6">
                     {leaveRecords.map((record, index) => {
                         if (!record) return null;
                         const team = getMemberTeam(record.name) || undefined;
@@ -1515,8 +1486,8 @@ const LeaveDatePage: React.FC = () => {
                         const bgColorClass = memberRole === '班長' ? 'bg-red-50 border-red-200' : 'bg-blue-50 border-blue-200';
 
                         return (
-                            <div key={index} className="flex gap-4">
-                                <div className={`flex-1 ${bgColorClass} rounded-md p-4`}>
+                            <div key={index} className="flex flex-col lg:flex-row gap-4">
+                                <div className={`w-full lg:w-1/2 ${bgColorClass} rounded-md p-4`}>
                                     <div className="space-y-2">
                                         <p className="text-gray-700">
                                             <span className="font-medium">請假人員：</span>
@@ -1548,18 +1519,18 @@ const LeaveDatePage: React.FC = () => {
                                     </div>
                                 </div>
 
-                                <div className="flex-1 bg-green-50 border border-green-200 rounded-md p-4">
+                                <div className="w-full lg:w-1/2 bg-green-50 border border-green-200 rounded-md p-4">
                                     {record.period === 'fullDay' && (
                                         <div className="space-y-4">
                                             <div className="space-y-2">
                                                 <div className="space-y-2">
                                                     {bigRestTeam ? (
                                                         <div className="mb-2 p-2 bg-blue-50 rounded-md border border-blue-200">
-                                                            <p className="text-sm text-blue-600 font-medium">加班建議：當日大休班級為{bigRestTeam}班</p>
+                                                            <p className="text-sm text-blue-600 font-medium whitespace-nowrap">加班建議：當日大休班級為{bigRestTeam}班</p>
                                                         </div>
                                                     ) : (
                                                         <div className="mb-2 p-2 bg-gray-50 rounded-md border border-gray-200">
-                                                            <p className="text-sm text-gray-600 font-medium">加班建議：當日無大休班級</p>
+                                                            <p className="text-xs text-gray-600 font-medium whitespace-nowrap">加班建議：當日無大休班級</p>
                                                         </div>
                                                     )}
                                                 </div>
@@ -1611,11 +1582,11 @@ const LeaveDatePage: React.FC = () => {
                                                         {/* 加班人員選擇 - 加整班 */}
                                                         {overtimeStates[record._id || '']?.selectedType === '加整班' && bigRestTeam && (
                                                             <div className="space-y-2">
-                                                                <div className="flex items-center gap-2">
+                                                                <div className="flex flex-col gap-1">
                                                                     <select
                                                                         value={overtimeStates[record._id || '']?.selectedMember || (record.fullDayOvertime?.fullDayMember ? record.fullDayOvertime.fullDayMember.name : '')}
                                                                         onChange={(e) => handleOvertimeMemberChange(record, e.target.value)}
-                                                                        className="flex-1 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                                                                        className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
                                                                         disabled={record.fullDayOvertime?.fullDayMember?.confirmed}
                                                                     >
                                                                         <option value="">請選擇加班人員</option>
@@ -1629,7 +1600,7 @@ const LeaveDatePage: React.FC = () => {
                                                                     {(overtimeStates[record._id || '']?.selectedMember || record.fullDayOvertime?.fullDayMember?.name) && !record.fullDayOvertime?.fullDayMember?.confirmed && (
                                                                         <button
                                                                             onClick={() => handleUpdateOvertimeConfirm(record, true)}
-                                                                            className="px-3 py-2 text-sm font-medium text-white bg-green-500 rounded-md hover:bg-green-600"
+                                                                            className="w-full sm:w-auto mt-2 sm:mt-0 px-2 py-1 text-xs font-medium text-white bg-green-500 rounded-md hover:bg-green-600 whitespace-nowrap"
                                                                         >
                                                                             確認加班
                                                                         </button>
@@ -1638,7 +1609,7 @@ const LeaveDatePage: React.FC = () => {
                                                                     {record.fullDayOvertime?.fullDayMember?.confirmed && (
                                                                         <button
                                                                             onClick={() => handleUpdateOvertimeConfirm(record, false)}
-                                                                            className="px-3 py-2 text-sm font-medium text-white bg-red-500 rounded-md hover:bg-red-600"
+                                                                            className="w-full sm:w-auto mt-2 sm:mt-0 px-2 py-1 text-xs font-medium text-white bg-red-500 rounded-md hover:bg-red-600 whitespace-nowrap"
                                                                         >
                                                                             取消加班
                                                                         </button>
@@ -1672,11 +1643,11 @@ const LeaveDatePage: React.FC = () => {
                                                                             <span className="px-2 py-1 text-xs font-medium text-white bg-green-500 rounded-full">已確認</span>
                                                                         )}
                                                                     </div>
-                                                                    <div className="flex items-center gap-2">
+                                                                    <div className="flex flex-col gap-1">
                                                                         <select
                                                                             value={record.fullDayOvertime?.firstHalfMember?.name || ''}
                                                                             onChange={(e) => handleOvertimeMemberChange(record, e.target.value, 'first')}
-                                                                            className="flex-1 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                                                                            className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
                                                                             disabled={record.fullDayOvertime?.firstHalfMember?.confirmed}
                                                                         >
                                                                             <option value="">請選擇加前半人員</option>
@@ -1690,7 +1661,7 @@ const LeaveDatePage: React.FC = () => {
                                                                         {record.fullDayOvertime?.firstHalfMember?.name && !record.fullDayOvertime?.firstHalfMember?.confirmed && (
                                                                             <button
                                                                                 onClick={() => handleUpdateOvertimeConfirm(record, true, 'first')}
-                                                                                className="px-3 py-2 text-sm font-medium text-white bg-green-500 rounded-md hover:bg-green-600"
+                                                                                className="w-full sm:w-auto mt-2 sm:mt-0 px-2 py-1 text-xs font-medium text-white bg-green-500 rounded-md hover:bg-green-600 whitespace-nowrap"
                                                                             >
                                                                                 確認前半加班
                                                                             </button>
@@ -1699,7 +1670,7 @@ const LeaveDatePage: React.FC = () => {
                                                                         {record.fullDayOvertime?.firstHalfMember?.confirmed && (
                                                                             <button
                                                                                 onClick={() => handleUpdateOvertimeConfirm(record, false, 'first')}
-                                                                                className="px-3 py-2 text-sm font-medium text-white bg-red-500 rounded-md hover:bg-red-600"
+                                                                                className="w-full sm:w-auto mt-2 sm:mt-0 px-2 py-1 text-xs font-medium text-white bg-red-500 rounded-md hover:bg-red-600 whitespace-nowrap"
                                                                             >
                                                                                 取消前半加班
                                                                             </button>
@@ -1724,11 +1695,11 @@ const LeaveDatePage: React.FC = () => {
                                                                             <span className="px-2 py-1 text-xs font-medium text-white bg-green-500 rounded-full">已確認</span>
                                                                         )}
                                                                     </div>
-                                                                    <div className="flex items-center gap-2">
+                                                                    <div className="flex flex-col gap-1">
                                                                         <select
                                                                             value={record.fullDayOvertime?.secondHalfMember?.name || ''}
                                                                             onChange={(e) => handleOvertimeMemberChange(record, e.target.value, 'second')}
-                                                                            className="flex-1 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                                                                            className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
                                                                             disabled={record.fullDayOvertime?.secondHalfMember?.confirmed}
                                                                         >
                                                                             <option value="">請選擇加後半人員</option>
@@ -1742,7 +1713,7 @@ const LeaveDatePage: React.FC = () => {
                                                                         {record.fullDayOvertime?.secondHalfMember?.name && !record.fullDayOvertime?.secondHalfMember?.confirmed && (
                                                                             <button
                                                                                 onClick={() => handleUpdateOvertimeConfirm(record, true, 'second')}
-                                                                                className="px-3 py-2 text-sm font-medium text-white bg-green-500 rounded-md hover:bg-green-600"
+                                                                                className="w-full sm:w-auto mt-2 sm:mt-0 px-2 py-1 text-xs font-medium text-white bg-green-500 rounded-md hover:bg-green-600 whitespace-nowrap"
                                                                             >
                                                                                 確認後半加班
                                                                             </button>
@@ -1751,7 +1722,7 @@ const LeaveDatePage: React.FC = () => {
                                                                         {record.fullDayOvertime?.secondHalfMember?.confirmed && (
                                                                             <button
                                                                                 onClick={() => handleUpdateOvertimeConfirm(record, false, 'second')}
-                                                                                className="px-3 py-2 text-sm font-medium text-white bg-red-500 rounded-md hover:bg-red-600"
+                                                                                className="w-full sm:w-auto mt-2 sm:mt-0 px-2 py-1 text-xs font-medium text-white bg-red-500 rounded-md hover:bg-red-600 whitespace-nowrap"
                                                                             >
                                                                                 取消後半加班
                                                                             </button>
@@ -1839,18 +1810,18 @@ const LeaveDatePage: React.FC = () => {
     };
 
     return (
-        <div className="container mx-auto px-4 py-8">
-            <div className="flex items-center justify-between mb-6">
-                <h1 className="text-2xl font-bold text-gray-800">{formattedDate} 請假管理</h1>
+        <div className="max-w-md w-full mx-auto px-2 py-4 sm:py-8">
+            <div className="flex flex-col sm:flex-row items-center justify-between mb-4 sm:mb-6 gap-2">
+                <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-800">{formattedDate} 請假管理</h1>
                 <button
                     onClick={() => router.push('/')}
-                    className="px-4 py-2 text-sm font-medium text-blue-600 bg-blue-50 rounded-md hover:bg-blue-100"
+                    className="w-full sm:w-auto px-3 py-2 text-xs sm:text-sm font-medium text-blue-600 bg-blue-50 rounded-xl hover:bg-blue-100"
                 >
                     返回日曆
                 </button>
             </div>
 
-            <div className="bg-white rounded-lg shadow-md p-6 mb-8">
+            <div className="bg-white rounded-lg shadow-md p-4 md:p-6 mb-8">
                 <h2 className="text-lg font-semibold text-gray-800 mb-4">新增請假</h2>
                 <div className="space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1862,7 +1833,7 @@ const LeaveDatePage: React.FC = () => {
                                     setSelectedTeam(e.target.value);
                                     setSelectedMember('');
                                 }}
-                                className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                                className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
                                 disabled={isSubmitting}
                             >
                                 <option value="">請選擇班級</option>
@@ -1883,7 +1854,7 @@ const LeaveDatePage: React.FC = () => {
                             <select
                                 value={selectedMember}
                                 onChange={(e) => setSelectedMember(e.target.value)}
-                                className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                                className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
                                 disabled={!selectedTeam || isSubmitting}
                             >
                                 <option value="">請選擇人員</option>

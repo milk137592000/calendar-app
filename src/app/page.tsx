@@ -2,10 +2,11 @@
 
 import React, { useState } from 'react';
 import Calendar from '@/components/Calendar';
-import { DaySchedule, ShiftType, LeaveRecord, TEAMS } from '@/types/schedule';
+import { DaySchedule, ShiftType, TEAMS } from '@/types/schedule';
 import { format } from 'date-fns';
 import { useRouter } from 'next/navigation';
 import { TEAM_START_POSITIONS } from '@/utils/schedule';
+import type { LeaveRecord } from "@/types/LeaveRecord";
 
 // 模擬農曆日期
 const getLunarDate = (date: Date) => {
@@ -124,10 +125,10 @@ export default function Home() {
     return (
         <main className="min-h-screen bg-gray-100">
             <div className="container mx-auto py-8 px-4">
-                <h1 className="text-2xl font-bold text-gray-800 mb-4 w-full text-center pl-4">
+                <h1 className="text-2xl font-bold text-gray-800 mb-2 w-full text-center pl-4">
                     四輕丁二烯
                 </h1>
-                <div className="mb-8 flex flex-col sm:flex-row justify-end items-center gap-4">
+                <div className="mb-4 flex justify-center items-center">
                     <div className="relative">
                         <select
                             value={selectedTeam}
