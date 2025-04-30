@@ -1435,7 +1435,12 @@ const LeaveDatePage: React.FC = () => {
         const shift = getTeamShift(team, date);
         if (!shift || shift === '小休' || shift === '大休') return { firstHalf: '', secondHalf: '' };
 
-        const isFirst = isFirstDayOfShift(team, shift);
+        // 取得 cyclePosition
+        const startDate = new Date('2025/04/01');
+        const targetDate = new Date(date);
+        const daysDiff = Math.floor((targetDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+        const startPos = TEAM_START_POSITIONS[team];
+        const cyclePosition = ((startPos + daysDiff) % 8 + 8) % 8;
 
         const getCurrentTeam = (targetShift: ShiftType) => getTeamByShift(targetShift, false, date);
         const getPreviousTeam = (targetShift: ShiftType) => getTeamByShift(targetShift, true, date);
@@ -1460,14 +1465,25 @@ const LeaveDatePage: React.FC = () => {
 
         switch (shift) {
             case '早班':
+                // 早班1: cyclePosition==1，早班2: cyclePosition==2
                 firstHalfSuggestion = todayZhong;
-                secondHalfSuggestion = isFirst ? todayXiaoXiu : todayYe;
+                if (cyclePosition === 1) {
+                    secondHalfSuggestion = todayXiaoXiu;
+                } else {
+                    secondHalfSuggestion = todayYe;
+                }
                 break;
             case '中班':
+                // 中班1: cyclePosition==3， 中班2: cyclePosition==4
                 firstHalfSuggestion = todayZao;
-                secondHalfSuggestion = isFirst ? todayXiaoXiu : todayYe;
+                if (cyclePosition === 3) {
+                    secondHalfSuggestion = todayXiaoXiu;
+                } else {
+                    secondHalfSuggestion = todayYe;
+                }
                 break;
             case '夜班':
+                // 夜班: cyclePosition==6 or 7
                 firstHalfSuggestion = prevZao;
                 secondHalfSuggestion = prevZhong;
                 break;
