@@ -10,6 +10,7 @@
     "check-schedule": "ts-node --project tsconfig.json src/scripts/checkSchedule.ts"
   },
   "dependencies": {
+    "@line/liff": "^2.26.0",
     "date-fns": "^2.30.0",
     "dotenv": "^16.4.7",
     "mongodb": "^6.3.0",

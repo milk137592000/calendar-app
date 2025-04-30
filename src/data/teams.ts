@@ -23,10 +23,10 @@ export const TEAMS: Record<string, Team> = {
     'B': {
         members: [
             { name: '隆', role: '班長' },
-            { name: '貓', role: '班長' },
+            { name: '廷', role: '班長' },
             { name: '順', role: '班長' },
             { name: '惟', role: '班員' },
-            { name: '廷', role: '班員' },
+            { name: 'B-1', role: '班員' },
             { name: '瑋', role: '班員' },
             { name: '獻', role: '班員' },
             { name: '堃', role: '班員' },
