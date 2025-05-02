@@ -1699,13 +1699,13 @@ const LeaveDatePage: React.FC = () => {
                         } else if (record.customOvertime?.name) {
                             overtimePeople = record.customOvertime.name;
                         }
+                        
                         return (
-                            <div key={index} className="flex flex-col sm:flex-row gap-2 sm:gap-4">
+                            <div key={index} className="flex flex-row gap-2">
                                 {/* 請假卡 */}
                                 <div
-                                    className={`w-full sm:w-1/2 ${bgColorClass} rounded-md p-2 sm:p-4 cursor-pointer transition-all relative`}
+                                    className={`flex-1 ${bgColorClass} rounded-md p-2 cursor-pointer transition-all relative`}
                                     onClick={() => toggleExpand(index, 'leave')}
-                                    style={{ minWidth: '200px', flex: '1 1 200px' }}
                                 >
                                     {!isLeaveExpanded ? (
                                         <div className="flex items-center justify-center h-full min-h-[40px] text-base font-semibold">
@@ -1721,7 +1721,7 @@ const LeaveDatePage: React.FC = () => {
 
                                 {/* 加班卡 */}
                                 <div
-                                    className={`w-full sm:w-1/2 ${isOvertimeComplete ? 'bg-gray-100 border-gray-200' : 'bg-green-50 border-green-200'} rounded-md p-2 sm:p-4 cursor-pointer transition-all relative`}
+                                    className={`flex-1 ${isOvertimeComplete ? 'bg-gray-100 border-gray-200' : 'bg-green-50 border-green-200'} rounded-md p-2 cursor-pointer transition-all relative`}
                                     onClick={() => {
                                         toggleExpand(index, 'overtime');
                                         setTimeout(() => {
@@ -1731,7 +1731,6 @@ const LeaveDatePage: React.FC = () => {
                                             if (select) select.focus();
                                         }, 100);
                                     }}
-                                    style={{ minWidth: '200px', flex: '1 1 200px' }}
                                 >
                                     {!isOvertimeExpanded ? (
                                         <div className="flex items-center justify-center h-full min-h-[40px] text-base font-semibold text-green-800">
