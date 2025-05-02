@@ -1710,7 +1710,7 @@ const LeaveDatePage: React.FC = () => {
                                     {!isLeaveExpanded ? (
                                         <div className="flex items-center justify-center h-full min-h-[40px] text-base font-semibold">
                                             <span className="text-gray-800">{record.name}</span>
-                                            <span className="text-xs ml-1 text-gray-600">{record.team}</span>
+                                            <span className="text-[0.67em] ml-1 text-gray-600">{teamShift}{record.team?.replace('班', '')}</span>
                                         </div>
                                     ) : (
                                         <div className="relative z-30">
