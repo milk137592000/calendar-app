@@ -470,13 +470,12 @@ export async function PUT(request: Request) {
                         );
                     }
 
-                    // 檢查是否已經有整班或半班記錄
+                    // 檢查是否已經有整班記錄
                     orConditions.push(
-                        // 檢查是否已經加過整班
                         {
                             'fullDayOvertime.type': '加整班',
                             'fullDayOvertime.fullDayMember.name': fullDayOvertime.fullDayMember.name,
-                            _id: { $ne: record._id } // Exclude current record
+                            _id: { $ne: record._id }
                         }
                     );
                 } else if (fullDayOvertime.type === '加一半') {
@@ -485,18 +484,17 @@ export async function PUT(request: Request) {
                         const memberTeam = fullDayOvertime.firstHalfMember.team;
                         const isMemberBigRest = await checkIfBigRestTeam(memberTeam, date);
 
+                        // 檢查是否已經加過整班
                         orConditions.push(
-                            // 檢查是否已經加過整班
                             {
                                 'fullDayOvertime.type': '加整班',
                                 'fullDayOvertime.fullDayMember.name': fullDayOvertime.firstHalfMember.name,
-                                _id: { $ne: record._id } // Exclude current record
+                                _id: { $ne: record._id }
                             }
                         );
 
-                        // 檢查是否已經加過半班 (排除目前正在編輯的記錄)
+                        // 檢查是否已經加過半班
                         if (record._id) {
-                            // 檢查其他記錄中是否已有半班加班
                             orConditions.push(
                                 {
                                     _id: { $ne: record._id },
@@ -517,16 +515,16 @@ export async function PUT(request: Request) {
                         const memberTeam = fullDayOvertime.secondHalfMember.team;
                         const isMemberBigRest = await checkIfBigRestTeam(memberTeam, date);
 
+                        // 檢查是否已經加過整班
                         orConditions.push(
-                            // 檢查是否已經加過整班
                             {
                                 'fullDayOvertime.type': '加整班',
                                 'fullDayOvertime.fullDayMember.name': fullDayOvertime.secondHalfMember.name,
-                                _id: { $ne: record._id } // Exclude current record
+                                _id: { $ne: record._id }
                             }
                         );
 
-                        // 檢查是否已經加過半班 (排除目前正在編輯的記錄)
+                        // 檢查是否已經加過半班
                         if (record._id) {
                             orConditions.push(
                                 {
@@ -552,26 +550,31 @@ export async function PUT(request: Request) {
 
                 // 只有查到的 existingOvertime 不是自己時才報錯
                 if (existingOvertime && existingOvertime._id.toString() !== record._id.toString()) {
-                    // 只有非大休班級才限制只能加一個半班
+                    // 檢查是否為大休或小休班級
                     const isMemberBigRest = await checkIfBigRestTeam(
                         fullDayOvertime.fullDayMember?.team ||
                         fullDayOvertime.firstHalfMember?.team ||
                         fullDayOvertime.secondHalfMember?.team || '', date
                     );
-                    if (!isMemberBigRest) {
-                    if (fullDayOvertime.type === '加整班') {
-                        return NextResponse.json(
-                            { error: '該人員已經有加班記錄，大休班級人員最多可以加一個整班和一個半班' },
-                            { status: 400 }
-                        );
-                    } else {
-                        return NextResponse.json(
-                            { error: '該人員已經有加班記錄，非大休班級人員最多只能加一個半班' },
-                            { status: 400 }
-                        );
+                    const isMemberSmallRest = await checkIfSmallRestTeam(
+                        fullDayOvertime.fullDayMember?.team ||
+                        fullDayOvertime.firstHalfMember?.team ||
+                        fullDayOvertime.secondHalfMember?.team || '', date
+                    );
+
+                    if (!isMemberBigRest && !isMemberSmallRest) {
+                        if (fullDayOvertime.type === '加整班') {
+                            return NextResponse.json(
+                                { error: '該人員已經有加班記錄，大休或小休班級人員最多可以加一個整班和一個半班' },
+                                { status: 400 }
+                            );
+                        } else {
+                            return NextResponse.json(
+                                { error: '該人員已經有加班記錄，非大休或小休班級人員最多只能加一個半班' },
+                                { status: 400 }
+                            );
+                        }
                     }
-                    }
-                    // 大休班級成員不受此限制
                 }
 
                 // 更新加班資訊
@@ -640,4 +643,28 @@ async function checkIfBigRestTeam(team: string, date: string): Promise<boolean> 
     });
 
     return shift === '大休';
+}
+
+// 新增檢查是否為小休班級的函數
+async function checkIfSmallRestTeam(team: string, date: string): Promise<boolean> {
+    // 檢查該班級在指定日期是否為小休
+    const targetDate = new Date(date);
+    const startDate = new Date('2025/04/01');
+    const daysDiff = Math.floor((targetDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+
+    // 計算在 8 天循環中的位置
+    const cyclePosition = (TEAM_START_POSITIONS[team] + daysDiff) % 8;
+
+    // 獲取該天的班別
+    const shift = SHIFT_CYCLE[cyclePosition];
+    console.log('班別計算:', {
+        team,
+        date,
+        daysDiff,
+        startPosition: TEAM_START_POSITIONS[team],
+        cyclePosition,
+        shift
+    });
+
+    return shift === '小休';
 } 

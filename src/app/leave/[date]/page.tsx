@@ -1437,19 +1437,10 @@ const LeaveDatePage: React.FC = () => {
         const bigRestTeam = getBigRestTeam();
         const selectedType = overtimeStates[record._id || '']?.selectedType;
 
-        // 加整班時，只能選大休班級且 role=班長 的成員
+        // 加整班時，只能選大休班級
         if (selectedType === '加整班' && bigRestTeam) {
-            if (leaveRole === '班長') {
-                // 請假人員是班長，只能班長加班
-                return TEAMS[bigRestTeam].members
-                    .filter(m => m.role === '班長')
-                    .map(m => ({ ...m, team: bigRestTeam }));
-            } else {
-                // 請假人員是班員，班長和班員都可以加班
-                return TEAMS[bigRestTeam].members
-                    .filter(m => m.role === '班長' || m.role === '班員')
-                    .map(m => ({ ...m, team: bigRestTeam }));
-            }
+            return TEAMS[bigRestTeam].members
+                .map(m => ({ ...m, team: bigRestTeam }));
         }
 
         // 取得所有其他班的成員
@@ -1460,23 +1451,60 @@ const LeaveDatePage: React.FC = () => {
         // 班長請假，只能由其他班的班長加班
         if (leaveRole === '班長') {
             candidates = candidates.filter(m => m.role === '班長');
-        } else {
-            // 班員請假，其他班的班長班員都可以加班
-            candidates = candidates.filter(m => m.role === '班長' || m.role === '班員');
         }
+        // 班員請假，其他班的班長班員都可以加班（不需要額外過濾）
 
-        // 加一半時，前後半不得同班且不得同人（除非該班大休）
+        // 加一半時，前後半不得由同個班級加班，除非該班當日為大休或小休
         if (record.fullDayOvertime?.type === '加一半') {
             const first = record.fullDayOvertime.firstHalfMember;
             const second = record.fullDayOvertime.secondHalfMember;
-            if (halfType === 'first' && second && second.team !== bigRestTeam) {
-                candidates = candidates.filter(m => m.team !== second.team && m.name !== second.name);
+            if (halfType === 'first' && second) {
+                const secondTeamShift = getTeamShift(second.team, date);
+                if (secondTeamShift !== '大休' && secondTeamShift !== '小休') {
+                    candidates = candidates.filter(m => m.team !== second.team);
+                }
             }
-            if (halfType === 'second' && first && first.team !== bigRestTeam) {
-                candidates = candidates.filter(m => m.team !== first.team && m.name !== first.name);
+            if (halfType === 'second' && first) {
+                const firstTeamShift = getTeamShift(first.team, date);
+                if (firstTeamShift !== '大休' && firstTeamShift !== '小休') {
+                    candidates = candidates.filter(m => m.team !== first.team);
+                }
             }
         }
-        console.log('getAvailableOvertimeMembers', { leaveRole, candidates });
+
+        // 檢查輪班順序限制，但小休班級不受此限制
+        if (halfType) {
+            const memberTeam = halfType === 'first' ? 
+                record.fullDayOvertime?.firstHalfMember?.team :
+                record.fullDayOvertime?.secondHalfMember?.team;
+            
+            if (memberTeam && memberTeam !== bigRestTeam) {
+                const memberShift = getTeamShift(memberTeam, date);
+                // 如果是小休班級，不受輪班順序限制
+                if (memberShift !== '小休') {
+                    if (memberShift === '夜班') {
+                        // 若加班人員加當日夜班，則也可以加當日中班
+                        candidates = candidates.filter(m => {
+                            const mShift = getTeamShift(m.team, date);
+                            return mShift === '中班';
+                        });
+                    } else if (memberShift === '早班') {
+                        // 不能加中班
+                        candidates = candidates.filter(m => {
+                            const mShift = getTeamShift(m.team, date);
+                            return mShift !== '中班';
+                        });
+                    } else if (memberShift === '中班') {
+                        // 不能加早班
+                        candidates = candidates.filter(m => {
+                            const mShift = getTeamShift(m.team, date);
+                            return mShift !== '早班';
+                        });
+                    }
+                }
+            }
+        }
+
         return candidates;
     };
 
@@ -1607,13 +1635,14 @@ const LeaveDatePage: React.FC = () => {
                         const memberRole = team ? getMemberRole(record.name) : undefined;
                         const isLeaveExpanded = expandedIndexes[index]?.leave;
                         const isOvertimeExpanded = expandedIndexes[index]?.overtime;
+                        const teamShift = team ? getTeamShift(team, date) : null;
                         
                         // 判斷是否已找齊加班人員
                         const isOvertimeComplete = record.fullDayOvertime?.type === '加整班' 
                             ? record.fullDayOvertime.fullDayMember?.confirmed 
                             : record.fullDayOvertime?.type === '加一半' 
                                 ? (record.fullDayOvertime.firstHalfMember?.confirmed && record.fullDayOvertime.secondHalfMember?.confirmed)
-                                : false;
+                                : record.customOvertime?.confirmed;
                         
                         // 依據是否找齊加班人員決定背景色
                         const bgColorClass = isOvertimeComplete 
@@ -1642,15 +1671,28 @@ const LeaveDatePage: React.FC = () => {
                                     {!isLeaveExpanded ? (
                                         <div className="flex items-center justify-center h-full min-h-[40px] text-base font-semibold text-gray-800">
                                             <span className="flex items-center">
-                                                <span>{record.name}</span>
-                                                <span className="text-xs ml-1">{team}</span>
+                                                {typeof record.period === 'object' && record.period.type === 'custom' ? (
+                                                    <>
+                                                        <span className="text-base">{record.name}</span>
+                                                        <span className="text-[0.5em] ml-1">
+                                                            {record.period.startTime}-{record.period.endTime}
+                                                        </span>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <span className="text-base">{record.name}</span>
+                                                        <span className="text-[0.67em] ml-1">
+                                                            {teamShift?.replace('班', '')}{team?.replace('班', '')}
+                                                        </span>
+                                                    </>
+                                                )}
                                             </span>
                                         </div>
                                     ) : (
                                         <div className="space-y-2">
                                             <p className="text-gray-700"><span className="font-medium">請假人員：</span>{record.name} ({memberRole || '未知'})</p>
                                             <p className="text-gray-700"><span className="font-medium">所屬班級：</span>{team}</p>
-                                            <p className="text-gray-700"><span className="font-medium">當天班別：</span>{team ? getTeamShift(team, date) || '未排班' : '未知'}</p>
+                                            <p className="text-gray-700"><span className="font-medium">當天班別：</span>{teamShift || '未排班'}</p>
                                             <p className="text-xs text-gray-700 whitespace-nowrap"><span className="font-medium">請假時段：</span>{record.period === 'fullDay' ? '一整天' : typeof record.period === 'object' && record.period !== null ? `${record.period.startTime} - ${record.period.endTime}` : '未設定時段'}</p>
                                             <div className="mt-2">
                                                 <button onClick={e => {e.stopPropagation(); handleDelete(record);}} className="px-3 py-1 text-sm font-medium text-red-600 bg-red-50 border border-red-200 rounded-md hover:bg-red-100">取消請假</button>
@@ -1679,16 +1721,14 @@ const LeaveDatePage: React.FC = () => {
                                                 <div className="flex flex-row gap-4 justify-center w-full">
                                                     {record.fullDayOvertime.firstHalfMember?.name && (
                                                         <span className="flex items-center">
-                                                            <span className="text-sm mr-1">前</span>
-                                                            <span>{record.fullDayOvertime.firstHalfMember.name}</span>
-                                                            <span className="text-xs ml-1">{record.fullDayOvertime.firstHalfMember.team}</span>
+                                                            <span className="text-[0.67em] mr-1">前{record.fullDayOvertime.firstHalfMember.team?.replace('班', '')}</span>
+                                                            <span className="text-base">{record.fullDayOvertime.firstHalfMember.name}</span>
                                                         </span>
                                                     )}
                                                     {record.fullDayOvertime.secondHalfMember?.name && (
                                                         <span className="flex items-center">
-                                                            <span className="text-sm mr-1">後</span>
-                                                            <span>{record.fullDayOvertime.secondHalfMember.name}</span>
-                                                            <span className="text-xs ml-1">{record.fullDayOvertime.secondHalfMember.team}</span>
+                                                            <span className="text-[0.67em] mr-1">後{record.fullDayOvertime.secondHalfMember.team?.replace('班', '')}</span>
+                                                            <span className="text-base">{record.fullDayOvertime.secondHalfMember.name}</span>
                                                         </span>
                                                     )}
                                                 </div>
