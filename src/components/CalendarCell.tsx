@@ -130,12 +130,23 @@ const CalendarCell: React.FC<CalendarCellProps> = ({
                         const team = Object.entries(TEAMS).find(([_, teamData]) =>
                             teamData.members.some(member => member.name === record.name)
                         )?.[0] || '';
+                        
+                        // 根據請假人數調整字體大小
+                        const fontSizeClass = dayLeaveRecords.length > 4 
+                            ? 'text-[7px]' 
+                            : 'text-[9px]';
+                        
+                        // 根據請假人數調整內邊距
+                        const paddingClass = dayLeaveRecords.length > 4
+                            ? 'px-1 py-0.25'
+                            : 'px-2 py-0.5';
+                            
                         return (
                             <span
                                 key={idx}
-                                className={`text-[9px] px-2 py-0.5 rounded-full font-medium whitespace-nowrap ${tagClass}`}
+                                className={`${fontSizeClass} ${paddingClass} rounded-full font-medium whitespace-nowrap ${tagClass}`}
                             >
-                                {record.name}<span className="text-[8px] align-middle">{team}</span>
+                                {record.name}<span className={`${dayLeaveRecords.length > 4 ? 'text-[6px]' : 'text-[8px]'} align-middle`}>{team}</span>
                             </span>
                         );
                     })}

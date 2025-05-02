@@ -559,17 +559,17 @@ export async function PUT(request: Request) {
                         fullDayOvertime.secondHalfMember?.team || '', date
                     );
                     if (!isMemberBigRest) {
-                        if (fullDayOvertime.type === '加整班') {
-                            return NextResponse.json(
-                                { error: '該人員已經有加班記錄，大休班級人員最多可以加一個整班和一個半班' },
-                                { status: 400 }
-                            );
-                        } else {
-                            return NextResponse.json(
-                                { error: '該人員已經有加班記錄，非大休班級人員最多只能加一個半班' },
-                                { status: 400 }
-                            );
-                        }
+                    if (fullDayOvertime.type === '加整班') {
+                        return NextResponse.json(
+                            { error: '該人員已經有加班記錄，大休班級人員最多可以加一個整班和一個半班' },
+                            { status: 400 }
+                        );
+                    } else {
+                        return NextResponse.json(
+                            { error: '該人員已經有加班記錄，非大休班級人員最多只能加一個半班' },
+                            { status: 400 }
+                        );
+                    }
                     }
                     // 大休班級成員不受此限制
                 }
@@ -597,13 +597,13 @@ export async function PUT(request: Request) {
             if (isEmpty) {
                 record.customOvertime = undefined;
             } else {
-                record.customOvertime = {
-                    name: customOvertime.name,
-                    team: customOvertime.team || '',
-                    startTime: customOvertime.startTime,
-                    endTime: customOvertime.endTime,
-                    confirmed: customOvertime.confirmed
-                };
+            record.customOvertime = {
+                name: customOvertime.name,
+                team: customOvertime.team || '',
+                startTime: customOvertime.startTime,
+                endTime: customOvertime.endTime,
+                confirmed: customOvertime.confirmed
+            };
             }
             await record.save();
         }

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { format, isAfter, isToday, startOfDay, parse, addMinutes } from 'date-fns';
 import { useParams, useRouter } from 'next/navigation';
 import { TEAMS } from '@/data/teams';
@@ -223,6 +223,50 @@ const LeaveDatePage: React.FC = () => {
     }>({});
     const [overtimeSuggestions, setOvertimeSuggestions] = useState({ suggestion: '', reason: '' });
     const [bigRestTeam, setBigRestTeam] = useState<string | null>(null);
+    // 新增觸控滑動狀態
+    const touchStartX = useRef<number | null>(null);
+    const touchEndX = useRef<number | null>(null);
+    const [expandedIndexes, setExpandedIndexes] = useState<{[key:number]: {leave: boolean, overtime: boolean}}>({});
+
+    const toggleExpand = (index: number, type: 'leave' | 'overtime') => {
+        setExpandedIndexes(prev => ({
+            ...prev,
+            [index]: {
+                ...prev[index],
+                [type]: !prev[index]?.[type]
+            }
+        }));
+    };
+
+    // 處理觸控開始
+    const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+        touchStartX.current = e.touches[0].clientX;
+    };
+    // 處理觸控移動
+    const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
+        touchEndX.current = e.touches[0].clientX;
+    };
+    // 處理觸控結束
+    const handleTouchEnd = () => {
+        if (touchStartX.current === null || touchEndX.current === null) return;
+        const diff = touchEndX.current - touchStartX.current;
+        if (Math.abs(diff) > 50) {
+            const current = new Date(date);
+            if (diff < 0) {
+                // 左滑，下一天
+                const next = new Date(current);
+                next.setDate(current.getDate() + 1);
+                router.push(`/leave/${format(next, 'yyyy-MM-dd')}`);
+            } else {
+                // 右滑，前一天
+                const prev = new Date(current);
+                prev.setDate(current.getDate() - 1);
+                router.push(`/leave/${format(prev, 'yyyy-MM-dd')}`);
+            }
+        }
+        touchStartX.current = null;
+        touchEndX.current = null;
+    };
 
     // 獲取請假記錄
     const fetchLeaveRecords = async () => {
@@ -284,7 +328,7 @@ const LeaveDatePage: React.FC = () => {
     };
 
     // FullDayOvertimeCard 組件 - 處理全天請假情況
-    const FullDayOvertimeCard: React.FC<{ record: LeaveRecordType }> = ({ record }) => {
+    const FullDayOvertimeCard: React.FC<{ record: LeaveRecordType; selectClassName?: string }> = ({ record, selectClassName }) => {
         const customOvertime = record.customOvertime;
 
         // 找出當天大休的班級
@@ -329,50 +373,100 @@ const LeaveDatePage: React.FC = () => {
                 <div className="space-y-4 p-4 bg-green-50 rounded-md border border-green-200">
                     <div className="space-y-4">
                         {/* 前半加班資訊 */}
-                        {record.fullDayOvertime.firstHalfMember && (
-                            <div className="p-3 bg-green-100 rounded-md">
-                                <div className="flex justify-between items-center mb-2">
-                                    <span className="text-sm font-medium text-green-700">加前半</span>
-                                    {record.fullDayOvertime.firstHalfMember.confirmed && (
-                                        <span className="px-2 py-1 text-xs font-medium text-white bg-green-500 rounded-full">已確認</span>
-                                    )}
-                                </div>
-                                <p className="text-sm text-green-700">
-                                    加班人員：{record.fullDayOvertime.firstHalfMember.name} ({record.fullDayOvertime.firstHalfMember.team}班)
-                                </p>
-                                {record.fullDayOvertime.firstHalfMember.confirmed && (
+                        <div className="p-3 bg-green-100 rounded-md">
+                            <div className="flex justify-between items-center mb-2">
+                                <span className="text-sm font-medium text-green-700">加前半</span>
+                                {record.fullDayOvertime.firstHalfMember?.confirmed && (
+                                    <span className="px-2 py-1 text-xs font-medium text-white bg-green-500 rounded-full">已確認</span>
+                                )}
+                            </div>
+                            {record.fullDayOvertime.firstHalfMember?.confirmed ? (
+                                <>
+                                    <p className="text-sm text-green-700">
+                                        加班人員：{record.fullDayOvertime.firstHalfMember.name} ({record.fullDayOvertime.firstHalfMember.team}班)
+                                    </p>
                                     <button
                                         onClick={() => handleUpdateOvertimeConfirm(record, false, 'first')}
                                         className="w-full mt-2 px-3 py-2 text-sm font-medium text-white bg-red-500 rounded-md hover:bg-red-600"
                                     >
                                         取消前半加班
                                     </button>
-                                )}
-                            </div>
-                        )}
-
-                        {/* 後半加班資訊 */}
-                        {record.fullDayOvertime.secondHalfMember && (
-                            <div className="p-3 bg-green-100 rounded-md">
-                                <div className="flex justify-between items-center mb-2">
-                                    <span className="text-sm font-medium text-green-700">加後半</span>
-                                    {record.fullDayOvertime.secondHalfMember.confirmed && (
-                                        <span className="px-2 py-1 text-xs font-medium text-white bg-green-500 rounded-full">已確認</span>
+                                </>
+                            ) : (
+                                <div className="flex flex-col gap-1">
+                                    <select
+                                        value={record.fullDayOvertime?.firstHalfMember?.name || ''}
+                                        onChange={(e) => handleOvertimeMemberChange(record, e.target.value, 'first')}
+                                        onClick={(e) => e.stopPropagation()}
+                                        className={"w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 " + (selectClassName || "")}
+                                    >
+                                        <option value="">請選擇加前半人員</option>
+                                        {(getAvailableOvertimeMembers(record, 'first') || []).map(member => (
+                                            <option key={`${member.team}-${member.name}`} value={member.name}>
+                                                {member.name} ({member.role}, {member.team}班)
+                                            </option>
+                                        ))}
+                                    </select>
+                                    
+                                    {record.fullDayOvertime?.firstHalfMember?.name && !record.fullDayOvertime?.firstHalfMember?.confirmed && (
+                                        <button
+                                            onClick={() => handleUpdateOvertimeConfirm(record, true, 'first')}
+                                            className="w-full mt-2 px-3 py-2 text-sm font-medium text-white bg-green-500 rounded-md hover:bg-green-600"
+                                        >
+                                            確認前半加班
+                                        </button>
                                     )}
                                 </div>
-                                <p className="text-sm text-green-700">
-                                    加班人員：{record.fullDayOvertime.secondHalfMember.name} ({record.fullDayOvertime.secondHalfMember.team}班)
-                                </p>
-                                {record.fullDayOvertime.secondHalfMember.confirmed && (
+                            )}
+                        </div>
+
+                        {/* 後半加班資訊 */}
+                        <div className="p-3 bg-green-100 rounded-md">
+                            <div className="flex justify-between items-center mb-2">
+                                <span className="text-sm font-medium text-green-700">加後半</span>
+                                {record.fullDayOvertime.secondHalfMember?.confirmed && (
+                                    <span className="px-2 py-1 text-xs font-medium text-white bg-green-500 rounded-full">已確認</span>
+                                )}
+                            </div>
+                            {record.fullDayOvertime.secondHalfMember?.confirmed ? (
+                                <>
+                                    <p className="text-sm text-green-700">
+                                        加班人員：{record.fullDayOvertime.secondHalfMember.name} ({record.fullDayOvertime.secondHalfMember.team}班)
+                                    </p>
                                     <button
                                         onClick={() => handleUpdateOvertimeConfirm(record, false, 'second')}
                                         className="w-full mt-2 px-3 py-2 text-sm font-medium text-white bg-red-500 rounded-md hover:bg-red-600"
                                     >
                                         取消後半加班
                                     </button>
-                                )}
-                            </div>
-                        )}
+                                </>
+                            ) : (
+                                <div className="flex flex-col gap-1">
+                                    <select
+                                        value={record.fullDayOvertime?.secondHalfMember?.name || ''}
+                                        onChange={(e) => handleOvertimeMemberChange(record, e.target.value, 'second')}
+                                        onClick={(e) => e.stopPropagation()}
+                                        className={"w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 " + (selectClassName || "")}
+                                    >
+                                        <option value="">請選擇加後半人員</option>
+                                        {(getAvailableOvertimeMembers(record, 'second') || []).map(member => (
+                                            <option key={`${member.team}-${member.name}`} value={member.name}>
+                                                {member.name} ({member.role}, {member.team}班)
+                                            </option>
+                                        ))}
+                                    </select>
+                                    
+                                    {record.fullDayOvertime?.secondHalfMember?.name && !record.fullDayOvertime?.secondHalfMember?.confirmed && (
+                                        <button
+                                            onClick={() => handleUpdateOvertimeConfirm(record, true, 'second')}
+                                            className="w-full mt-2 px-3 py-2 text-sm font-medium text-white bg-green-500 rounded-md hover:bg-green-600"
+                                        >
+                                            確認後半加班
+                                        </button>
+                                    )}
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
             );
@@ -396,11 +490,12 @@ const LeaveDatePage: React.FC = () => {
                                     onChange={(e) => {
                                         handleOvertimeTypeChange(record, e.target.value as OvertimeType);
                                     }}
-                                    className="flex-1 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                                    disabled={record.fullDayOvertime?.fullDayMember?.confirmed ||
+                                    onClick={(e) => e.stopPropagation()}
+                                    className={"flex-1 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 " + (selectClassName || "")}
+                                    disabled={!!(record.fullDayOvertime?.fullDayMember?.confirmed ||
                                         (record.fullDayOvertime?.type === '加一半' &&
                                             record.fullDayOvertime?.firstHalfMember?.confirmed &&
-                                            record.fullDayOvertime?.secondHalfMember?.confirmed)}
+                                            record.fullDayOvertime?.secondHalfMember?.confirmed))}
                                 >
                                     <option value="">請選擇加班類型</option>
                                     {bigRestTeam && <option value="加整班">加整班</option>}
@@ -415,11 +510,12 @@ const LeaveDatePage: React.FC = () => {
                                         <select
                                             value={overtimeStates[record._id || '']?.selectedMember || (record.fullDayOvertime?.fullDayMember ? record.fullDayOvertime.fullDayMember.name : '')}
                                             onChange={(e) => handleOvertimeMemberChange(record, e.target.value)}
-                                            className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
+                                            onClick={(e) => e.stopPropagation()}
+                                            className={"w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 " + (selectClassName || "")}
                                             disabled={record.fullDayOvertime?.fullDayMember?.confirmed}
                                         >
                                             <option value="">請選擇加班人員</option>
-                                            {getAvailableOvertimeMembers(record).map(member => (
+                                            {(getAvailableOvertimeMembers(record) || []).map(member => (
                                                 <option key={`${member.team}-${member.name}`} value={member.name}>
                                                     {member.name} ({member.role}, {member.team}班)
                                                 </option>
@@ -476,11 +572,12 @@ const LeaveDatePage: React.FC = () => {
                                             <select
                                                 value={record.fullDayOvertime?.firstHalfMember?.name || ''}
                                                 onChange={(e) => handleOvertimeMemberChange(record, e.target.value, 'first')}
-                                                className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
+                                                onClick={(e) => e.stopPropagation()}
+                                                className={"w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 " + (selectClassName || "")}
                                                 disabled={record.fullDayOvertime?.firstHalfMember?.confirmed}
                                             >
                                                 <option value="">請選擇加前半人員</option>
-                                                {getAvailableOvertimeMembers(record, 'first').map(member => (
+                                                {(getAvailableOvertimeMembers(record, 'first') || []).map(member => (
                                                     <option key={`${member.team}-${member.name}`} value={member.name}>
                                                         {member.name} ({member.role}, {member.team}班)
                                                     </option>
@@ -528,11 +625,12 @@ const LeaveDatePage: React.FC = () => {
                                             <select
                                                 value={record.fullDayOvertime?.secondHalfMember?.name || ''}
                                                 onChange={(e) => handleOvertimeMemberChange(record, e.target.value, 'second')}
-                                                className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
+                                                onClick={(e) => e.stopPropagation()}
+                                                className={"w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 " + (selectClassName || "")}
                                                 disabled={record.fullDayOvertime?.secondHalfMember?.confirmed}
                                             >
                                                 <option value="">請選擇加後半人員</option>
-                                                {getAvailableOvertimeMembers(record, 'second').map(member => (
+                                                {(getAvailableOvertimeMembers(record, 'second') || []).map(member => (
                                                     <option key={`${member.team}-${member.name}`} value={member.name}>
                                                         {member.name} ({member.role}, {member.team}班)
                                                     </option>
@@ -701,18 +799,15 @@ const LeaveDatePage: React.FC = () => {
                                 id="overtimeMember"
                                 value={selectedMember}
                                 onChange={handleMemberChange}
-                                className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
+                                onClick={(e) => e.stopPropagation()}
+                                className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                             >
                                 <option value="">請選擇加班人員</option>
-                                {availableCandidates.length > 0 ? (
-                                    availableCandidates.map((member) => (
-                                        <option key={`${member.team}-${member.name}`} value={member.name}>
-                                            {member.name} ({member.role}, {member.team}班)
-                                        </option>
-                                    ))
-                                ) : (
-                                    <option value="" disabled>無可用加班人員</option>
-                                )}
+                                {availableCandidates.map(member => (
+                                    <option key={`${member.team}-${member.name}`} value={member.name}>
+                                        {member.name} ({member.role}, {member.team}班)
+                                    </option>
+                                ))}
                             </select>
                         </div>
 
@@ -1505,272 +1600,115 @@ const LeaveDatePage: React.FC = () => {
         return (
             <div className="mt-8">
                 <h2 className="text-lg font-semibold text-gray-800 mb-4">當日請假記錄</h2>
-                <div className="space-y-6">
+                <div className="flex flex-row flex-wrap gap-2 sm:gap-4">
                     {leaveRecords.map((record, index) => {
                         if (!record) return null;
                         const team = getMemberTeam(record.name) || undefined;
                         const memberRole = team ? getMemberRole(record.name) : undefined;
-                        const bgColorClass = memberRole === '班長' ? 'bg-red-50 border-red-200' : 'bg-blue-50 border-blue-200';
-
+                        const isLeaveExpanded = expandedIndexes[index]?.leave;
+                        const isOvertimeExpanded = expandedIndexes[index]?.overtime;
+                        
+                        // 判斷是否已找齊加班人員
+                        const isOvertimeComplete = record.fullDayOvertime?.type === '加整班' 
+                            ? record.fullDayOvertime.fullDayMember?.confirmed 
+                            : record.fullDayOvertime?.type === '加一半' 
+                                ? (record.fullDayOvertime.firstHalfMember?.confirmed && record.fullDayOvertime.secondHalfMember?.confirmed)
+                                : false;
+                        
+                        // 依據是否找齊加班人員決定背景色
+                        const bgColorClass = isOvertimeComplete 
+                            ? 'bg-gray-100 border-gray-200'
+                            : memberRole === '班長' ? 'bg-red-50 border-red-200' : 'bg-blue-50 border-blue-200';
+                        
+                        // 判斷加班人員
+                        let overtimePeople = '';
+                        if (record.fullDayOvertime?.type === '加整班' && record.fullDayOvertime.fullDayMember) {
+                            overtimePeople = record.fullDayOvertime.fullDayMember.name;
+                        } else if (record.fullDayOvertime?.type === '加一半') {
+                            const first = record.fullDayOvertime.firstHalfMember?.name;
+                            const second = record.fullDayOvertime.secondHalfMember?.name;
+                            overtimePeople = [first, second].filter(Boolean).join(' / ');
+                        } else if (record.customOvertime?.name) {
+                            overtimePeople = record.customOvertime.name;
+                        }
                         return (
-                            <div key={index} className="flex flex-col lg:flex-row gap-4">
-                                <div className={`w-full lg:w-1/2 ${bgColorClass} rounded-md p-4`}>
-                                    <div className="space-y-2">
-                                        <p className="text-gray-700">
-                                            <span className="font-medium">請假人員：</span>
-                                            {record.name} ({memberRole || '未知'})
-                                        </p>
-                                        <p className="text-gray-700">
-                                            <span className="font-medium">所屬班級：</span>
-                                            {team}
-                                        </p>
-                                        <p className="text-gray-700">
-                                            <span className="font-medium">當天班別：</span>
-                                            {team ? getTeamShift(team, date) || '未排班' : '未知'}
-                                        </p>
-                                        <p className="text-xs text-gray-700 whitespace-nowrap">
-                                            <span className="font-medium">請假時段：</span>
-                                            {record.period === 'fullDay' ? '一整天' :
-                                                typeof record.period === 'object' && record.period !== null ?
-                                                    `${record.period.startTime} - ${record.period.endTime}` :
-                                                    '未設定時段'}
-                                        </p>
-                                        <div className="mt-2">
-                                            <button
-                                                onClick={() => handleDelete(record)}
-                                                className="px-3 py-1 text-sm font-medium text-red-600 bg-red-50 border border-red-200 rounded-md hover:bg-red-100"
-                                            >
-                                                取消請假
-                                            </button>
+                            <React.Fragment key={index}>
+                                {/* 請假卡 */}
+                                <div
+                                    className={`w-full sm:w-1/2 ${bgColorClass} rounded-md p-2 sm:p-4 cursor-pointer transition-all`}
+                                    onClick={() => toggleExpand(index, 'leave')}
+                                    style={{ minWidth: '200px', flex: '1 1 200px' }}
+                                >
+                                    {!isLeaveExpanded ? (
+                                        <div className="flex items-center justify-center h-full min-h-[40px] text-base font-semibold text-gray-800">
+                                            <span className="flex items-center">
+                                                <span>{record.name}</span>
+                                                <span className="text-xs ml-1">{team}</span>
+                                            </span>
                                         </div>
-                                    </div>
+                                    ) : (
+                                        <div className="space-y-2">
+                                            <p className="text-gray-700"><span className="font-medium">請假人員：</span>{record.name} ({memberRole || '未知'})</p>
+                                            <p className="text-gray-700"><span className="font-medium">所屬班級：</span>{team}</p>
+                                            <p className="text-gray-700"><span className="font-medium">當天班別：</span>{team ? getTeamShift(team, date) || '未排班' : '未知'}</p>
+                                            <p className="text-xs text-gray-700 whitespace-nowrap"><span className="font-medium">請假時段：</span>{record.period === 'fullDay' ? '一整天' : typeof record.period === 'object' && record.period !== null ? `${record.period.startTime} - ${record.period.endTime}` : '未設定時段'}</p>
+                                            <div className="mt-2">
+                                                <button onClick={e => {e.stopPropagation(); handleDelete(record);}} className="px-3 py-1 text-sm font-medium text-red-600 bg-red-50 border border-red-200 rounded-md hover:bg-red-100">取消請假</button>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
-
-                                <div className="w-full lg:w-1/2 bg-green-50 border border-green-200 rounded-md p-4">
-                                    {record.period === 'fullDay' && (
-                                        <div className="space-y-4">
-                                            <div className="space-y-2">
-                                                <div className="space-y-2">
-                                                    {bigRestTeam ? (
-                                                        <div className="mb-2 p-2 bg-blue-50 rounded-md border border-blue-200">
-                                                            <p className="text-sm text-blue-600 font-medium whitespace-nowrap">加班建議：當日大休班級為{bigRestTeam}班</p>
-                                                        </div>
-                                                    ) : (
-                                                        <div className="mb-2 p-2 bg-gray-50 rounded-md border border-gray-200">
-                                                            <p className="text-xs text-gray-600 font-medium whitespace-nowrap">加班建議：當日無大休班級</p>
-                                                        </div>
+                                {/* 加班卡 */}
+                                <div
+                                    className={`w-full sm:w-1/2 ${isOvertimeComplete ? 'bg-gray-100 border-gray-200' : 'bg-green-50 border-green-200'} rounded-md p-2 sm:p-4 cursor-pointer transition-all relative`}
+                                    onClick={() => {
+                                        toggleExpand(index, 'overtime');
+                                        setTimeout(() => {
+                                            const select = document.querySelector(
+                                                `.overtime-select-${record._id}`
+                                            ) as HTMLSelectElement | null;
+                                            if (select) select.focus();
+                                        }, 100);
+                                    }}
+                                    style={{ minWidth: '200px', flex: '1 1 200px' }}
+                                >
+                                    {!isOvertimeExpanded ? (
+                                        <div className="flex items-center justify-center h-full min-h-[40px] text-base font-semibold text-green-800">
+                                            {/* 加一半時兩人水平排列 */}
+                                            {record.fullDayOvertime?.type === '加一半' ? (
+                                                <div className="flex flex-row gap-4 justify-center w-full">
+                                                    {record.fullDayOvertime.firstHalfMember?.name && (
+                                                        <span className="flex items-center">
+                                                            <span className="text-sm mr-1">前</span>
+                                                            <span>{record.fullDayOvertime.firstHalfMember.name}</span>
+                                                            <span className="text-xs ml-1">{record.fullDayOvertime.firstHalfMember.team}</span>
+                                                        </span>
+                                                    )}
+                                                    {record.fullDayOvertime.secondHalfMember?.name && (
+                                                        <span className="flex items-center">
+                                                            <span className="text-sm mr-1">後</span>
+                                                            <span>{record.fullDayOvertime.secondHalfMember.name}</span>
+                                                            <span className="text-xs ml-1">{record.fullDayOvertime.secondHalfMember.team}</span>
+                                                        </span>
                                                     )}
                                                 </div>
-                                            </div>
-
-                                            {/* 已確認的全天加班顯示 */}
-                                            {record.fullDayOvertime?.confirmed && record.fullDayOvertime?.type === '加整班' ? (
-                                                <div className="p-3 bg-green-100 rounded-md">
-                                                    <div className="flex justify-between items-center mb-2">
-                                                        <span className="text-sm font-medium text-green-700">
-                                                            加班人員: {record.fullDayOvertime.fullDayMember?.name} ({record.fullDayOvertime.fullDayMember?.team}班)
-                                                        </span>
-                                                        <span className="px-2 py-1 text-xs font-medium text-white bg-green-500 rounded-full">已確認</span>
-                                                    </div>
-                                                    <button
-                                                        onClick={() => {
-                                                            if (record.fullDayOvertime?.fullDayMember) {
-                                                                handleUpdateOvertimeConfirm(record, !record.fullDayOvertime.fullDayMember.confirmed);
-                                                            }
-                                                        }}
-                                                        className="w-full mt-2 px-3 py-2 text-sm font-medium text-white bg-red-500 rounded-md hover:bg-red-600"
-                                                    >
-                                                        取消加班
-                                                    </button>
-                                                </div>
+                                            ) : record.fullDayOvertime?.type === '加整班' && record.fullDayOvertime.fullDayMember ? (
+                                                <span className="flex items-center justify-center">
+                                                    <span>{record.fullDayOvertime.fullDayMember.name}</span>
+                                                    <span className="text-xs ml-1">{record.fullDayOvertime.fullDayMember.team}</span>
+                                                </span>
                                             ) : (
-                                                <>
-                                                    {/* 加班選項 */}
-                                                    <div className="space-y-4">
-                                                        {/* 加班類型選擇 */}
-                                                        <div className="flex items-center gap-2">
-                                                            <select
-                                                                value={overtimeStates[record._id || '']?.selectedType || ''}
-                                                                onChange={(e) => {
-                                                                    handleOvertimeTypeChange(record, e.target.value as OvertimeType);
-                                                                }}
-                                                                className="flex-1 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                                                                disabled={record.fullDayOvertime?.fullDayMember?.confirmed ||
-                                                                    (record.fullDayOvertime?.type === '加一半' &&
-                                                                        record.fullDayOvertime?.firstHalfMember?.confirmed &&
-                                                                        record.fullDayOvertime?.secondHalfMember?.confirmed)}
-                                                            >
-                                                                <option value="">請選擇加班類型</option>
-                                                                {bigRestTeam && <option value="加整班">加整班</option>}
-                                                                <option value="加一半">加一半</option>
-                                                            </select>
-                                                        </div>
-
-                                                        {/* 加班人員選擇 - 加整班 */}
-                                                        {overtimeStates[record._id || '']?.selectedType === '加整班' && bigRestTeam && (
-                                                            <div className="space-y-2">
-                                                                <div className="flex flex-col gap-1">
-                                                                    <select
-                                                                        value={overtimeStates[record._id || '']?.selectedMember || (record.fullDayOvertime?.fullDayMember ? record.fullDayOvertime.fullDayMember.name : '')}
-                                                                        onChange={(e) => handleOvertimeMemberChange(record, e.target.value)}
-                                                                        className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
-                                                                        disabled={record.fullDayOvertime?.fullDayMember?.confirmed}
-                                                                    >
-                                                                        <option value="">請選擇加班人員</option>
-                                                                        {getAvailableOvertimeMembers(record).map(member => (
-                                                                            <option key={`${member.team}-${member.name}`} value={member.name}>
-                                                                                {member.name} ({member.role}, {member.team}班)
-                                                                            </option>
-                                                                        ))}
-                                                                    </select>
-
-                                                                    {(overtimeStates[record._id || '']?.selectedMember || record.fullDayOvertime?.fullDayMember?.name) && !record.fullDayOvertime?.fullDayMember?.confirmed && (
-                                                                        <button
-                                                                            onClick={() => handleUpdateOvertimeConfirm(record, true)}
-                                                                            className="w-full sm:w-auto mt-2 sm:mt-0 px-2 py-1 text-xs font-medium text-white bg-green-500 rounded-md hover:bg-green-600 whitespace-nowrap"
-                                                                        >
-                                                                            確認加班
-                                                                        </button>
-                                                                    )}
-
-                                                                    {record.fullDayOvertime?.fullDayMember?.confirmed && (
-                                                                        <button
-                                                                            onClick={() => handleUpdateOvertimeConfirm(record, false)}
-                                                                            className="w-full sm:w-auto mt-2 sm:mt-0 px-2 py-1 text-xs font-medium text-white bg-red-500 rounded-md hover:bg-red-600 whitespace-nowrap"
-                                                                        >
-                                                                            取消加班
-                                                                        </button>
-                                                                    )}
-                                                                </div>
-                                                                {overtimeSuggestions.suggestion && (
-                                                                    <div className="p-2 bg-blue-50 rounded-md border border-blue-200">
-                                                                        <p className="text-sm text-blue-600 font-medium">{overtimeSuggestions.reason}</p>
-                                                                    </div>
-                                                                )}
-                                                            </div>
-                                                        )}
-
-                                                        {/* 加班人員選擇 - 加一半 */}
-                                                        {overtimeStates[record._id || '']?.selectedType === '加一半' && (
-                                                            <div className="space-y-4">
-                                                                {/* 前半加班人員 */}
-                                                                <div className="p-3 bg-green-50 rounded-md border border-green-200">
-                                                                    {(() => {
-                                                                        const team = getMemberTeam(record.name) || undefined;
-                                                                        const suggestions = getHalfDayOvertimeSuggestions(team, date);
-                                                                        return (
-                                                                            <div className="mb-2">
-                                                                                <div className="mb-1 text-xs text-blue-700 font-semibold">加前半建議: {suggestions.firstHalf}</div>
-                                                                            </div>
-                                                                        );
-                                                                    })()}
-                                                                    <div className="flex justify-between items-center mb-2">
-                                                                        <h4 className="text-sm font-medium text-green-700">加前半</h4>
-                                                                        {record.fullDayOvertime?.firstHalfMember?.confirmed && (
-                                                                            <span className="px-2 py-1 text-xs font-medium text-white bg-green-500 rounded-full">已確認</span>
-                                                                        )}
-                                                                    </div>
-                                                                    <div className="flex flex-col gap-1">
-                                                                        <select
-                                                                            value={record.fullDayOvertime?.firstHalfMember?.name || ''}
-                                                                            onChange={(e) => handleOvertimeMemberChange(record, e.target.value, 'first')}
-                                                                            className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
-                                                                            disabled={record.fullDayOvertime?.firstHalfMember?.confirmed}
-                                                                        >
-                                                                            <option value="">請選擇加前半人員</option>
-                                                                            {getAvailableOvertimeMembers(record, 'first').map(member => (
-                                                                                <option key={`${member.team}-${member.name}`} value={member.name}>
-                                                                                    {member.name} ({member.role}, {member.team}班)
-                                                                                </option>
-                                                                            ))}
-                                                                        </select>
-
-                                                                        {record.fullDayOvertime?.firstHalfMember?.name && !record.fullDayOvertime?.firstHalfMember?.confirmed && (
-                                                                            <button
-                                                                                onClick={() => handleUpdateOvertimeConfirm(record, true, 'first')}
-                                                                                className="w-full sm:w-auto mt-2 sm:mt-0 px-2 py-1 text-xs font-medium text-white bg-green-500 rounded-md hover:bg-green-600 whitespace-nowrap"
-                                                                            >
-                                                                                確認前半加班
-                                                                            </button>
-                                                                        )}
-
-                                                                        {record.fullDayOvertime?.firstHalfMember?.confirmed && (
-                                                                            <button
-                                                                                onClick={() => handleUpdateOvertimeConfirm(record, false, 'first')}
-                                                                                className="w-full sm:w-auto mt-2 sm:mt-0 px-2 py-1 text-xs font-medium text-white bg-red-500 rounded-md hover:bg-red-600 whitespace-nowrap"
-                                                                            >
-                                                                                取消前半加班
-                                                                            </button>
-                                                                        )}
-                                                                    </div>
-                                                                </div>
-
-                                                                {/* 後半加班人員 */}
-                                                                <div className="p-3 bg-green-50 rounded-md border border-green-200">
-                                                                    {(() => {
-                                                                        const team = getMemberTeam(record.name) || undefined;
-                                                                        const suggestions = getHalfDayOvertimeSuggestions(team, date);
-                                                                        return (
-                                                                            <div className="mb-2">
-                                                                                <div className="mb-1 text-xs text-blue-700 font-semibold">加後半建議: {suggestions.secondHalf}</div>
-                                                                            </div>
-                                                                        );
-                                                                    })()}
-                                                                    <div className="flex justify-between items-center mb-2">
-                                                                        <h4 className="text-sm font-medium text-green-700">加後半</h4>
-                                                                        {record.fullDayOvertime?.secondHalfMember?.confirmed && (
-                                                                            <span className="px-2 py-1 text-xs font-medium text-white bg-green-500 rounded-full">已確認</span>
-                                                                        )}
-                                                                    </div>
-                                                                    <div className="flex flex-col gap-1">
-                                                                        <select
-                                                                            value={record.fullDayOvertime?.secondHalfMember?.name || ''}
-                                                                            onChange={(e) => handleOvertimeMemberChange(record, e.target.value, 'second')}
-                                                                            className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
-                                                                            disabled={record.fullDayOvertime?.secondHalfMember?.confirmed}
-                                                                        >
-                                                                            <option value="">請選擇加後半人員</option>
-                                                                            {getAvailableOvertimeMembers(record, 'second').map(member => (
-                                                                                <option key={`${member.team}-${member.name}`} value={member.name}>
-                                                                                    {member.name} ({member.role}, {member.team}班)
-                                                                                </option>
-                                                                            ))}
-                                                                        </select>
-
-                                                                        {record.fullDayOvertime?.secondHalfMember?.name && !record.fullDayOvertime?.secondHalfMember?.confirmed && (
-                                                                            <button
-                                                                                onClick={() => handleUpdateOvertimeConfirm(record, true, 'second')}
-                                                                                className="w-full sm:w-auto mt-2 sm:mt-0 px-2 py-1 text-xs font-medium text-white bg-green-500 rounded-md hover:bg-green-600 whitespace-nowrap"
-                                                                            >
-                                                                                確認後半加班
-                                                                            </button>
-                                                                        )}
-
-                                                                        {record.fullDayOvertime?.secondHalfMember?.confirmed && (
-                                                                            <button
-                                                                                onClick={() => handleUpdateOvertimeConfirm(record, false, 'second')}
-                                                                                className="w-full sm:w-auto mt-2 sm:mt-0 px-2 py-1 text-xs font-medium text-white bg-red-500 rounded-md hover:bg-red-600 whitespace-nowrap"
-                                                                            >
-                                                                                取消後半加班
-                                                                            </button>
-                                                                        )}
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                </>
+                                                <span>{overtimePeople || '—'}</span>
                                             )}
                                         </div>
-                                    )}
-
-                                    {record.period !== 'fullDay' && (
-                                        <div className="space-y-4">
-                                            <CustomOvertimeCard record={record} />
+                                    ) : (
+                                        <div className="relative z-30">
+                                            {/* 原本的加班卡內容 */}
+                                            {record.period === 'fullDay' ? <FullDayOvertimeCard record={record} selectClassName={`overtime-select-${record._id}`} /> : <CustomOvertimeCard record={record} />}
                                         </div>
                                     )}
                                 </div>
-                            </div>
+                            </React.Fragment>
                         );
                     })}
                 </div>
@@ -1778,66 +1716,57 @@ const LeaveDatePage: React.FC = () => {
         );
     };
 
-    const updateLeaveRecord = async (date: string, name: string, updateData: any) => {
-        try {
-            const response = await fetch('/api/leave', {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    date,
-                    name,
-                    ...updateData
-                }),
-            });
-
-            if (!response.ok) {
-                throw new Error('Failed to update leave record');
-            }
-
-            return await response.json();
-        } catch (error) {
-            console.error('Error updating leave record:', error);
-            return null;
-        }
-    };
-
+    // 處理取消請假
     const handleDelete = async (record: LeaveRecordType) => {
-        if (!window.confirm('確定要刪除這筆請假記錄嗎？')) {
+        if (!confirm(`確定要取消 ${record.name} 的請假嗎？`)) {
             return;
         }
-
         try {
-            // 構建要刪除的數據，確保移除所有加班相關資訊
-            const deleteData = {
-                ...record,
-                fullDayOvertime: undefined,  // 移除全天加班資訊
-                customOvertime: undefined    // 移除自定義時段加班資訊
-            };
-
-            const response = await fetch(`/api/leave`, {
+            const response = await fetch('/api/leave', {
                 method: 'DELETE',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify(deleteData),
+                body: JSON.stringify({
+                    date: record.date,
+                    name: record.name,
+                }),
             });
-
             if (!response.ok) {
-                throw new Error('Failed to delete leave record');
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to delete leave record');
             }
-
-            // 重新獲取請假記錄
             await fetchLeaveRecords();
         } catch (error) {
             console.error('Error deleting leave record:', error);
-            alert('刪除請假記錄失敗');
+            alert('取消請假失敗：' + (error instanceof Error ? error.message : '未知錯誤'));
         }
     };
 
+    // useEffect for keyboard navigation
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'ArrowLeft') {
+                const current = new Date(date);
+                current.setDate(current.getDate() - 1);
+                router.push(`/leave/${format(current, 'yyyy-MM-dd')}`);
+            } else if (e.key === 'ArrowRight') {
+                const current = new Date(date);
+                current.setDate(current.getDate() + 1);
+                router.push(`/leave/${format(current, 'yyyy-MM-dd')}`);
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [date, router]);
+
     return (
-        <div className="max-w-md w-full mx-auto px-2 py-4 sm:py-8">
+        <div
+            className="max-w-md w-full mx-auto px-2 py-4 sm:py-8"
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+        >
             <div className="flex flex-col sm:flex-row items-center justify-between mb-4 sm:mb-6 gap-2">
                 <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-800">{formattedDate} 請假管理</h1>
                 <button
@@ -1847,139 +1776,102 @@ const LeaveDatePage: React.FC = () => {
                     返回日曆
                 </button>
             </div>
-
             <div className="bg-white rounded-lg shadow-md p-4 md:p-6 mb-8">
                 <h2 className="text-lg font-semibold text-gray-800 mb-4">新增請假</h2>
-                <div className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">班級</label>
-                            <select
-                                value={selectedTeam}
-                                onChange={(e) => {
-                                    setSelectedTeam(e.target.value);
-                                    setSelectedMember('');
-                                }}
-                                className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
-                                disabled={isSubmitting}
-                            >
-                                <option value="">請選擇班級</option>
-                                {teamOptions.map(option => (
-                                    <option
-                                        key={option.value}
-                                        value={option.value}
-                                        disabled={!option.canLeave}
-                                    >
-                                        {option.label}
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
-
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">人員</label>
-                            <select
-                                value={selectedMember}
-                                onChange={(e) => setSelectedMember(e.target.value)}
-                                className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
-                                disabled={!selectedTeam || isSubmitting}
-                            >
-                                <option value="">請選擇人員</option>
-                                {selectedTeam && TEAMS[selectedTeam]?.members.map(member => (
-                                    <option
-                                        key={member.name}
-                                        value={member.name}
-                                        disabled={!canTakeLeave(selectedTeam, member.name)}
-                                    >
-                                        {member.name} ({member.role})
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
+                <form onSubmit={e => { e.preventDefault(); handleSubmit(); }} className="space-y-4">
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">班級</label>
+                        <select
+                            value={selectedTeam}
+                            onChange={e => setSelectedTeam(e.target.value)}
+                            className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
+                        >
+                            <option value="">請選擇班級</option>
+                            {teamOptions.map(option => (
+                                <option key={option.value} value={option.value} disabled={!option.canLeave}>
+                                    {option.label}
+                                </option>
+                            ))}
+                        </select>
                     </div>
-
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">人員</label>
+                        <select
+                            value={selectedMember}
+                            onChange={e => setSelectedMember(e.target.value)}
+                            className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
+                            disabled={!selectedTeam}
+                        >
+                            <option value="">請選擇人員</option>
+                            {getAvailableMembers(selectedTeam).map(name => (
+                                <option key={name} value={name}>{name}</option>
+                            ))}
+                        </select>
+                    </div>
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">請假時段</label>
-                        <div className="flex items-center space-x-4">
-                            <label className="inline-flex items-center">
+                        <div className="flex gap-2">
+                            <label className="flex items-center">
                                 <input
                                     type="radio"
+                                    name="period"
                                     value="fullDay"
                                     checked={selectedPeriod === 'fullDay'}
                                     onChange={() => setSelectedPeriod('fullDay')}
-                                    className="h-4 w-4 text-blue-600 focus:ring-blue-500"
-                                    disabled={isSubmitting}
                                 />
-                                <span className="ml-2 text-sm text-gray-700">全天</span>
+                                <span className="ml-1">全天</span>
                             </label>
-                            <label className="inline-flex items-center">
+                            <label className="flex items-center">
                                 <input
                                     type="radio"
+                                    name="period"
                                     value="custom"
                                     checked={selectedPeriod === 'custom'}
                                     onChange={() => setSelectedPeriod('custom')}
-                                    className="h-4 w-4 text-blue-600 focus:ring-blue-500"
-                                    disabled={isSubmitting}
                                 />
-                                <span className="ml-2 text-sm text-gray-700">自定義時段</span>
+                                <span className="ml-1">自定義時段</span>
                             </label>
                         </div>
                     </div>
-
                     {selectedPeriod === 'custom' && (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">開始時間</label>
+                        <div className="flex gap-2">
+                            <div className="flex-1">
+                                <label className="block text-xs text-gray-500 mb-1">開始時間</label>
                                 <select
                                     value={customStartTime}
-                                    onChange={(e) => setCustomStartTime(e.target.value)}
-                                    className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                                    disabled={!selectedMember || isSubmitting}
+                                    onChange={e => setCustomStartTime(e.target.value)}
+                                    className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
                                 >
-                                    <option value="">請選擇開始時間</option>
+                                    <option value="">請選擇</option>
                                     {timeOptions.map(time => (
-                                        <option key={time} value={time}>
-                                            {formatTimeDisplay(time)}
-                                        </option>
+                                        <option key={time} value={time}>{formatTimeDisplay(time)}</option>
                                     ))}
                                 </select>
                             </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">結束時間</label>
+                            <div className="flex-1">
+                                <label className="block text-xs text-gray-500 mb-1">結束時間</label>
                                 <select
                                     value={customEndTime}
-                                    onChange={(e) => setCustomEndTime(e.target.value)}
-                                    className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                                    disabled={!customStartTime || isSubmitting}
+                                    onChange={e => setCustomEndTime(e.target.value)}
+                                    className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
                                 >
-                                    <option value="">請選擇結束時間</option>
+                                    <option value="">請選擇</option>
                                     {endTimeOptions.map(time => (
-                                        <option key={time} value={time}>
-                                            {formatTimeDisplay(time)}
-                                        </option>
+                                        <option key={time} value={time}>{formatTimeDisplay(time)}</option>
                                     ))}
                                 </select>
                             </div>
                         </div>
                     )}
-
-                    <div className="pt-4">
-                        <button
-                            onClick={handleSubmit}
-                            disabled={
-                                !selectedTeam ||
-                                !selectedMember ||
-                                (selectedPeriod === 'custom' && (!customStartTime || !customEndTime)) ||
-                                isSubmitting
-                            }
-                            className="w-full px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:bg-blue-300 disabled:cursor-not-allowed"
-                        >
-                            {isSubmitting ? '提交中...' : '提交請假'}
-                        </button>
-                    </div>
-                </div>
+                    <button
+                        type="submit"
+                        disabled={isSubmitting}
+                        className="w-full px-3 py-2 text-sm font-medium text-white rounded-md bg-blue-500 hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                    >
+                        送出請假申請
+                    </button>
+                </form>
             </div>
-
             {renderLeaveRecords()}
         </div>
     );
