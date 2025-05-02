@@ -1736,19 +1736,15 @@ const LeaveDatePage: React.FC = () => {
                                         <div className="flex items-center justify-center h-full min-h-[40px] text-base font-semibold text-green-800">
                                             {/* 加一半時兩人水平排列 */}
                                             {record.fullDayOvertime?.type === '加一半' ? (
-                                                <div className="flex flex-row gap-4 justify-center w-full">
-                                                    {record.fullDayOvertime.firstHalfMember?.name && (
-                                                        <span className="flex items-center">
-                                                            <span className="text-[0.67em] mr-1">前{record.fullDayOvertime.firstHalfMember.team?.replace('班', '')}</span>
-                                                            <span className="text-base">{record.fullDayOvertime.firstHalfMember.name}</span>
-                                                        </span>
-                                                    )}
-                                                    {record.fullDayOvertime.secondHalfMember?.name && (
-                                                        <span className="flex items-center">
-                                                            <span className="text-[0.67em] mr-1">後{record.fullDayOvertime.secondHalfMember.team?.replace('班', '')}</span>
-                                                            <span className="text-base">{record.fullDayOvertime.secondHalfMember.name}</span>
-                                                        </span>
-                                                    )}
+                                                <div className="flex flex-row gap-2 justify-center w-full">
+                                                    <span className="flex items-center">
+                                                        <span className="text-[0.67em]">前{record.fullDayOvertime.firstHalfMember?.team?.replace('班', '')}</span>
+                                                        <span className="text-base">{record.fullDayOvertime.firstHalfMember?.name || '--'}</span>
+                                                    </span>
+                                                    <span className="flex items-center">
+                                                        <span className="text-[0.67em]">後{record.fullDayOvertime.secondHalfMember?.team?.replace('班', '')}</span>
+                                                        <span className="text-base">{record.fullDayOvertime.secondHalfMember?.name || '--'}</span>
+                                                    </span>
                                                 </div>
                                             ) : record.fullDayOvertime?.type === '加整班' && record.fullDayOvertime.fullDayMember ? (
                                                 <span className="flex items-center justify-center">
