@@ -1618,6 +1618,45 @@ const LeaveDatePage: React.FC = () => {
         };
     };
 
+    const FullDayLeaveCard: React.FC<{ record: LeaveRecordType }> = ({ record }) => {
+        const team = getMemberTeam(record.name) || undefined;
+        const memberRole = team ? getMemberRole(record.name) : undefined;
+        const teamShift = team ? getTeamShift(team, date) : null;
+
+        return (
+            <div className="space-y-2">
+                <p className="text-gray-700"><span className="font-medium">請假人員：</span>{record.name} ({memberRole || '未知'})</p>
+                <p className="text-gray-700"><span className="font-medium">所屬班級：</span>{team}</p>
+                <p className="text-gray-700"><span className="font-medium">當天班別：</span>{teamShift || '未排班'}</p>
+                <p className="text-xs text-gray-700 whitespace-nowrap"><span className="font-medium">請假時段：</span>一整天</p>
+                <div className="mt-2">
+                    <button onClick={e => {e.stopPropagation(); handleDelete(record);}} className="px-3 py-1 text-sm font-medium text-red-600 bg-red-50 border border-red-200 rounded-md hover:bg-red-100">取消請假</button>
+                </div>
+            </div>
+        );
+    };
+
+    const CustomLeaveCard: React.FC<{ record: LeaveRecordType }> = ({ record }) => {
+        const team = getMemberTeam(record.name) || undefined;
+        const memberRole = team ? getMemberRole(record.name) : undefined;
+        const teamShift = team ? getTeamShift(team, date) : null;
+
+        return (
+            <div className="space-y-2">
+                <p className="text-gray-700"><span className="font-medium">請假人員：</span>{record.name} ({memberRole || '未知'})</p>
+                <p className="text-gray-700"><span className="font-medium">所屬班級：</span>{team}</p>
+                <p className="text-gray-700"><span className="font-medium">當天班別：</span>{teamShift || '未排班'}</p>
+                <p className="text-xs text-gray-700 whitespace-nowrap">
+                    <span className="font-medium">請假時段：</span>
+                    {typeof record.period === 'object' && record.period !== null ? `${record.period.startTime} - ${record.period.endTime}` : '未設定時段'}
+                </p>
+                <div className="mt-2">
+                    <button onClick={e => {e.stopPropagation(); handleDelete(record);}} className="px-3 py-1 text-sm font-medium text-red-600 bg-red-50 border border-red-200 rounded-md hover:bg-red-100">取消請假</button>
+                </div>
+            </div>
+        );
+    };
+
     const renderLeaveRecords = () => {
         if (!Array.isArray(leaveRecords) || leaveRecords.length === 0) {
             return null;
@@ -1628,7 +1667,7 @@ const LeaveDatePage: React.FC = () => {
         return (
             <div className="mt-8">
                 <h2 className="text-lg font-semibold text-gray-800 mb-4">當日請假記錄</h2>
-                <div className="flex flex-row flex-wrap gap-2 sm:gap-4">
+                <div className="space-y-4">
                     {leaveRecords.map((record, index) => {
                         if (!record) return null;
                         const team = getMemberTeam(record.name) || undefined;
@@ -1661,45 +1700,25 @@ const LeaveDatePage: React.FC = () => {
                             overtimePeople = record.customOvertime.name;
                         }
                         return (
-                            <React.Fragment key={index}>
+                            <div key={index} className="flex flex-col sm:flex-row gap-2 sm:gap-4">
                                 {/* 請假卡 */}
                                 <div
-                                    className={`w-full sm:w-1/2 ${bgColorClass} rounded-md p-2 sm:p-4 cursor-pointer transition-all`}
+                                    className={`w-full sm:w-1/2 ${bgColorClass} rounded-md p-2 sm:p-4 cursor-pointer transition-all relative`}
                                     onClick={() => toggleExpand(index, 'leave')}
                                     style={{ minWidth: '200px', flex: '1 1 200px' }}
                                 >
                                     {!isLeaveExpanded ? (
-                                        <div className="flex items-center justify-center h-full min-h-[40px] text-base font-semibold text-gray-800">
-                                            <span className="flex items-center">
-                                                {typeof record.period === 'object' && record.period.type === 'custom' ? (
-                                                    <>
-                                                        <span className="text-base">{record.name}</span>
-                                                        <span className="text-[0.5em] ml-1">
-                                                            {record.period.startTime}-{record.period.endTime}
-                                                        </span>
-                                                    </>
-                                                ) : (
-                                                    <>
-                                                        <span className="text-base">{record.name}</span>
-                                                        <span className="text-[0.67em] ml-1">
-                                                            {teamShift?.replace('班', '')}{team?.replace('班', '')}
-                                                        </span>
-                                                    </>
-                                                )}
-                                            </span>
+                                        <div className="flex items-center justify-center h-full min-h-[40px] text-base font-semibold">
+                                            <span className="text-gray-800">{record.name}</span>
+                                            <span className="text-xs ml-1 text-gray-600">{record.team}</span>
                                         </div>
                                     ) : (
-                                        <div className="space-y-2">
-                                            <p className="text-gray-700"><span className="font-medium">請假人員：</span>{record.name} ({memberRole || '未知'})</p>
-                                            <p className="text-gray-700"><span className="font-medium">所屬班級：</span>{team}</p>
-                                            <p className="text-gray-700"><span className="font-medium">當天班別：</span>{teamShift || '未排班'}</p>
-                                            <p className="text-xs text-gray-700 whitespace-nowrap"><span className="font-medium">請假時段：</span>{record.period === 'fullDay' ? '一整天' : typeof record.period === 'object' && record.period !== null ? `${record.period.startTime} - ${record.period.endTime}` : '未設定時段'}</p>
-                                            <div className="mt-2">
-                                                <button onClick={e => {e.stopPropagation(); handleDelete(record);}} className="px-3 py-1 text-sm font-medium text-red-600 bg-red-50 border border-red-200 rounded-md hover:bg-red-100">取消請假</button>
-                                            </div>
+                                        <div className="relative z-30">
+                                            {record.period === 'fullDay' ? <FullDayLeaveCard record={record} /> : <CustomLeaveCard record={record} />}
                                         </div>
                                     )}
                                 </div>
+
                                 {/* 加班卡 */}
                                 <div
                                     className={`w-full sm:w-1/2 ${isOvertimeComplete ? 'bg-gray-100 border-gray-200' : 'bg-green-50 border-green-200'} rounded-md p-2 sm:p-4 cursor-pointer transition-all relative`}
@@ -1748,7 +1767,7 @@ const LeaveDatePage: React.FC = () => {
                                         </div>
                                     )}
                                 </div>
-                            </React.Fragment>
+                            </div>
                         );
                     })}
                 </div>
