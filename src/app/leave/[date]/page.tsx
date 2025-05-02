@@ -1736,19 +1736,19 @@ const LeaveDatePage: React.FC = () => {
                                         <div className="flex items-center justify-center h-full min-h-[40px] text-base font-semibold text-green-800">
                                             {/* 加一半時兩人水平排列 */}
                                             {record.fullDayOvertime?.type === '加一半' ? (
-                                                <div className="flex flex-row items-center gap-4 justify-center w-full">
-                                                    <span className="flex items-center gap-1">
+                                                <div className="flex flex-row items-center gap-6 justify-center w-full">
+                                                    <span className="flex items-center">
                                                         <span className="text-[0.67em]">前{record.fullDayOvertime.firstHalfMember?.team?.replace('班', '')}</span>
-                                                        <span className="text-base">{record.fullDayOvertime.firstHalfMember?.name || '--'}</span>
+                                                        <span className="text-base ml-1">{record.fullDayOvertime.firstHalfMember?.name || '--'}</span>
                                                         {!record.fullDayOvertime.firstHalfMember?.name && 
-                                                            <span className="text-[0.67em] text-red-500">缺</span>
+                                                            <span className="text-[0.67em] text-red-500 ml-1">缺</span>
                                                         }
                                                     </span>
-                                                    <span className="flex items-center gap-1">
+                                                    <span className="flex items-center">
                                                         <span className="text-[0.67em]">後{record.fullDayOvertime.secondHalfMember?.team?.replace('班', '')}</span>
-                                                        <span className="text-base">{record.fullDayOvertime.secondHalfMember?.name || '--'}</span>
+                                                        <span className="text-base ml-1">{record.fullDayOvertime.secondHalfMember?.name || '--'}</span>
                                                         {!record.fullDayOvertime.secondHalfMember?.name && 
-                                                            <span className="text-[0.67em] text-red-500">缺</span>
+                                                            <span className="text-[0.67em] text-red-500 ml-1">缺</span>
                                                         }
                                                     </span>
                                                 </div>
