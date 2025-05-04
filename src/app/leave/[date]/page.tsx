@@ -387,10 +387,10 @@ const LeaveDatePage: React.FC = () => {
                                         加班人員：{record.fullDayOvertime.firstHalfMember.name} ({record.fullDayOvertime.firstHalfMember.team}班)
                                     </p>
                                     <button
-                                        onClick={() => handleCancelOvertime(record)}
+                                        onClick={() => handleUpdateOvertimeConfirm(record, true, "first")}
                                         className="w-full mt-2 px-3 py-2 text-sm font-medium text-white bg-red-500 rounded-md hover:bg-red-600"
                                     >
-                                        取消前半加班
+                                        確認前半加班
                                     </button>
                                 </>
                             ) : (
@@ -412,10 +412,19 @@ const LeaveDatePage: React.FC = () => {
                                     
                                     {record.fullDayOvertime?.firstHalfMember?.name && !record.fullDayOvertime?.firstHalfMember?.confirmed && (
                                         <button
-                                            onClick={() => handleUpdateOvertimeConfirm(record, true, 'first')}
+                                            onClick={() => handleUpdateOvertimeConfirm(record, true, "first")}
                                             className="w-full sm:w-auto mt-2 sm:mt-0 px-2 py-1 text-xs font-medium text-white bg-green-500 rounded-md hover:bg-green-600 whitespace-nowrap"
                                         >
                                             確認前半加班
+                                        </button>
+                                    )}
+
+                                    {record.fullDayOvertime?.firstHalfMember?.confirmed && (
+                                        <button
+                                            onClick={() => handleUpdateOvertimeConfirm(record, false, 'first')}
+                                            className="w-full sm:w-auto mt-2 sm:mt-0 px-2 py-1 text-xs font-medium text-white bg-red-500 rounded-md hover:bg-red-600 whitespace-nowrap"
+                                        >
+                                            取消前半加班
                                         </button>
                                     )}
                                 </div>
@@ -436,10 +445,10 @@ const LeaveDatePage: React.FC = () => {
                                         加班人員：{record.fullDayOvertime.secondHalfMember.name} ({record.fullDayOvertime.secondHalfMember.team}班)
                                     </p>
                                     <button
-                                        onClick={() => handleCancelOvertime(record)}
-                                        className="w-full mt-2 px-3 py-2 text-sm font-medium text-white bg-red-500 rounded-md hover:bg-red-600"
+                                        onClick={() => handleUpdateOvertimeConfirm(record, true, "second")}
+                                        className="w-full sm:w-auto mt-2 sm:mt-0 px-2 py-1 text-xs font-medium text-white bg-green-500 rounded-md hover:bg-green-600 whitespace-nowrap"
                                     >
-                                        取消後半加班
+                                        確認後半加班
                                     </button>
                                 </>
                             ) : (
@@ -460,10 +469,19 @@ const LeaveDatePage: React.FC = () => {
                                     
                                     {record.fullDayOvertime?.secondHalfMember?.name && !record.fullDayOvertime?.secondHalfMember?.confirmed && (
                                         <button
-                                            onClick={() => handleUpdateOvertimeConfirm(record, true, 'second')}
+                                            onClick={() => handleUpdateOvertimeConfirm(record, true, "second")}
                                             className="w-full sm:w-auto mt-2 sm:mt-0 px-2 py-1 text-xs font-medium text-white bg-green-500 rounded-md hover:bg-green-600 whitespace-nowrap"
                                         >
                                             確認後半加班
+                                        </button>
+                                    )}
+
+                                    {record.fullDayOvertime?.secondHalfMember?.confirmed && (
+                                        <button
+                                            onClick={() => handleUpdateOvertimeConfirm(record, false, 'second')}
+                                            className="w-full sm:w-auto mt-2 sm:mt-0 px-2 py-1 text-xs font-medium text-white bg-red-500 rounded-md hover:bg-red-600 whitespace-nowrap"
+                                        >
+                                            取消後半加班
                                         </button>
                                     )}
                                 </div>
@@ -588,10 +606,10 @@ const LeaveDatePage: React.FC = () => {
 
                                             {record.fullDayOvertime?.firstHalfMember?.name && !record.fullDayOvertime?.firstHalfMember?.confirmed && (
                                                 <button
-                                                    onClick={() => handleCancelOvertime(record)}
+                                                    onClick={() => handleUpdateOvertimeConfirm(record, true, "first")}
                                                     className="w-full sm:w-auto mt-2 sm:mt-0 px-2 py-1 text-xs font-medium text-white bg-red-500 rounded-md hover:bg-red-600 whitespace-nowrap"
                                                 >
-                                                    取消前半加班
+                                                    確認前半加班
                                                 </button>
                                             )}
 
@@ -641,10 +659,10 @@ const LeaveDatePage: React.FC = () => {
 
                                             {record.fullDayOvertime?.secondHalfMember?.name && !record.fullDayOvertime?.secondHalfMember?.confirmed && (
                                                 <button
-                                                    onClick={() => handleCancelOvertime(record)}
-                                                    className="w-full sm:w-auto mt-2 sm:mt-0 px-2 py-1 text-xs font-medium text-white bg-red-500 rounded-md hover:bg-red-600 whitespace-nowrap"
+                                                    onClick={() => handleUpdateOvertimeConfirm(record, true, "second")}
+                                                    className="w-full sm:w-auto mt-2 sm:mt-0 px-2 py-1 text-xs font-medium text-white bg-green-500 rounded-md hover:bg-green-600 whitespace-nowrap"
                                                 >
-                                                    取消後半加班
+                                                    確認後半加班
                                                 </button>
                                             )}
 
