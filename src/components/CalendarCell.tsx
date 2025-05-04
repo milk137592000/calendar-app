@@ -170,13 +170,19 @@ const CalendarCell: React.FC<CalendarCellProps> = ({
         if (isLeaveMode) return true;
         // 先判斷大休班級
         if (selectedTeam && shifts[selectedTeam as keyof typeof shifts] === '大休') {
-            const isOvertimeComplete = record.fullDayOvertime?.type === '加整班'
-                ? record.fullDayOvertime.fullDayMember?.confirmed
-                : record.fullDayOvertime?.type === '加一半' &&
-                  record.fullDayOvertime.firstHalfMember?.confirmed &&
-                  record.fullDayOvertime.secondHalfMember?.confirmed;
-            const hasConfirmedCustomOvertime = record.customOvertime?.confirmed;
-            return !isOvertimeComplete && !hasConfirmedCustomOvertime;
+            // 只要有任何一段沒補齊加班就顯示
+            let notFilled = false;
+            if (record.fullDayOvertime) {
+                if (record.fullDayOvertime.type === '加整班') {
+                    notFilled = !record.fullDayOvertime.fullDayMember?.confirmed;
+                } else if (record.fullDayOvertime.type === '加一半') {
+                    notFilled = !record.fullDayOvertime.firstHalfMember?.confirmed || !record.fullDayOvertime.secondHalfMember?.confirmed;
+                }
+            }
+            if (record.customOvertime) {
+                notFilled = notFilled || !record.customOvertime.confirmed;
+            }
+            return notFilled;
         }
         // 再判斷缺班級
         if (selectedTeam) {
