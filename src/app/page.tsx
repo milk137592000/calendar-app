@@ -56,7 +56,12 @@ const generateSchedules = (year: number, month: number): DaySchedule[] => {
 
 export default function Home() {
     const router = useRouter();
-    const [currentDate, setCurrentDate] = useState(new Date()); // 預設顯示今天
+    const [currentDate, setCurrentDate] = useState(() => {
+        const today = new Date();
+        // 確保日期設置為當天的開始時間
+        today.setHours(0, 0, 0, 0);
+        return today;
+    });
     const [selectedTeam, setSelectedTeam] = useState<string>('請假'); // 預設顯示請假日曆
     const [leaveRecords, setLeaveRecords] = useState<LeaveRecord[]>([]);
     const [userName, setUserName] = useState<string>('');
