@@ -139,7 +139,9 @@ const CalendarCell: React.FC<CalendarCellProps> = ({
 
     // 判斷是否應該顯示請假記錄
     const shouldShowLeaveRecord = (record: LeaveRecord) => {
-        // 如果當前班級是大休，顯示所有未找齊加班人員的請假記錄
+        // 請假模式下，所有班級都顯示請假資訊
+        if (isLeaveMode) return true;
+        // 其他情境維持原本邏輯
         if (selectedTeam && shifts[selectedTeam as keyof typeof shifts] === '大休') {
             const isOvertimeComplete = record.fullDayOvertime?.type === '加整班'
                 ? record.fullDayOvertime.fullDayMember?.confirmed
@@ -149,14 +151,26 @@ const CalendarCell: React.FC<CalendarCellProps> = ({
             const hasConfirmedCustomOvertime = record.customOvertime?.confirmed;
             return !isOvertimeComplete && !hasConfirmedCustomOvertime;
         }
-
-        // 如果當前班級在建議加班班級列表中，顯示請假記錄
         if (selectedTeam) {
             const suggestedTeams = getSuggestedOvertimeTeams(record);
             return suggestedTeams.includes(selectedTeam);
         }
-
         return false;
+    };
+
+    // 判斷是否為建議加班班級
+    const isSuggestedOvertime = (record: LeaveRecord) => {
+        if (!selectedTeam) return false;
+        const suggestedTeams = getSuggestedOvertimeTeams(record);
+        // 若已經有加班人員確認則不顯示標註
+        const isOvertimeComplete = record.fullDayOvertime?.type === '加整班'
+            ? record.fullDayOvertime.fullDayMember?.confirmed
+            : record.fullDayOvertime?.type === '加一半' &&
+              record.fullDayOvertime.firstHalfMember?.confirmed &&
+              record.fullDayOvertime.secondHalfMember?.confirmed;
+        const hasConfirmedCustomOvertime = record.customOvertime?.confirmed;
+        if (isOvertimeComplete || hasConfirmedCustomOvertime) return false;
+        return suggestedTeams.includes(selectedTeam);
     };
 
     return (
@@ -195,12 +209,9 @@ const CalendarCell: React.FC<CalendarCellProps> = ({
             {isLeaveMode && dayLeaveRecords.length > 0 && (
                 <div className="flex flex-col justify-center items-center gap-1 w-full mt-1">
                     {dayLeaveRecords.map((record, idx) => {
-                        // 判斷是否應該顯示這條請假記錄
                         if (!shouldShowLeaveRecord(record)) {
                             return null;
                         }
-
-                        // 判斷加班是否已確認
                         const isOvertimeComplete = record.fullDayOvertime?.type === '加整班'
                             ? record.fullDayOvertime.fullDayMember?.confirmed
                             : record.fullDayOvertime?.type === '加一半' &&
@@ -208,8 +219,6 @@ const CalendarCell: React.FC<CalendarCellProps> = ({
                               record.fullDayOvertime.secondHalfMember?.confirmed;
                         const hasConfirmedCustomOvertime = record.customOvertime?.confirmed;
                         const isConfirmed = isOvertimeComplete || hasConfirmedCustomOvertime;
-                        
-                        // 判斷班長/班員顏色
                         const role = getMemberRole(record.name);
                         let tagClass = '';
                         if (isConfirmed) {
@@ -219,18 +228,19 @@ const CalendarCell: React.FC<CalendarCellProps> = ({
                         } else {
                             tagClass = 'bg-blue-100 text-blue-700';
                         }
-                        
-                        // 根據請假人數調整字體大小
                         const fontSizeClass = dayLeaveRecords.length > 4 
                             ? 'text-[7px]' 
                             : 'text-[9px]';
-
                         return (
                             <div
                                 key={idx}
-                                className={`${tagClass} ${fontSizeClass} px-1 py-0.5 rounded whitespace-nowrap`}
+                                className={`flex items-center gap-1 ${tagClass} ${fontSizeClass} px-1 py-0.5 rounded whitespace-nowrap`}
                             >
                                 {record.name}
+                                {/* 若為建議加班班級，顯示標註 */}
+                                {isSuggestedOvertime(record) && (
+                                    <span className="ml-1 px-1 py-0.5 bg-yellow-200 text-yellow-800 rounded text-[8px]">可加班</span>
+                                )}
                             </div>
                         );
                     })}
