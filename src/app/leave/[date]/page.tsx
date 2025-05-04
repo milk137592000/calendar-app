@@ -1690,30 +1690,34 @@ const LeaveDatePage: React.FC = () => {
                             : memberRole === '班長' ? 'bg-red-50 border-red-200' : 'bg-blue-50 border-blue-200';
                         
                         // 判斷加班人員
-                        let overtimePeople = '';
+                        let overtimePeople: React.ReactNode = '';
                         if (record.period === 'fullDay') {
                             const suggestions = getHalfDayOvertimeSuggestions(team, date);
                             let first = '';
                             let firstTeam = suggestions.firstHalf;
                             let second = '';
                             let secondTeam = suggestions.secondHalf;
+                            let firstMissing = true;
+                            let secondMissing = true;
                             if (record.fullDayOvertime?.type === '加一半') {
                                 if (record.fullDayOvertime.firstHalfMember?.name) {
                                     first = record.fullDayOvertime.firstHalfMember.name;
                                     firstTeam = record.fullDayOvertime.firstHalfMember.team + '班';
-                                } else {
-                                    first = '';
-                                    firstTeam = suggestions.firstHalf;
+                                    firstMissing = false;
                                 }
                                 if (record.fullDayOvertime.secondHalfMember?.name) {
                                     second = record.fullDayOvertime.secondHalfMember.name;
                                     secondTeam = record.fullDayOvertime.secondHalfMember.team + '班';
-                                } else {
-                                    second = '';
-                                    secondTeam = suggestions.secondHalf;
+                                    secondMissing = false;
                                 }
                             }
-                            overtimePeople = `前${firstTeam}${first ? ' ' + first : ''}   後${secondTeam}${second ? ' ' + second : ''}`;
+                            overtimePeople = (
+                                <>
+                                    <span>前{firstTeam} {firstMissing ? <span className="text-red-500">缺</span> : first}</span>
+                                    <span className="mx-2" />
+                                    <span>後{secondTeam} {secondMissing ? <span className="text-red-500">缺</span> : second}</span>
+                                </>
+                            );
                             if (record.fullDayOvertime?.type === '加整班' && record.fullDayOvertime.fullDayMember) {
                                 overtimePeople = record.fullDayOvertime.fullDayMember.name;
                             }
