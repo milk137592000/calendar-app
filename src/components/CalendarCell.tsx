@@ -193,8 +193,8 @@ const CalendarCell: React.FC<CalendarCellProps> = ({
                 <div className="mt-2">
                     {selectedTeam ? (
                         currentTeamShiftType && (
-                            <div className="flex flex-row justify-center items-center gap-0.5 w-full overflow-x-auto whitespace-nowrap">
-                                <span className={`inline-block text-[9px] px-0.5 py-0.5 whitespace-nowrap text-center ${getShiftStyle(currentTeamShiftType)}`}>{selectedTeam}: {currentTeamShiftType}</span>
+                            <div className="flex flex-row justify-center items-center gap-1 w-full whitespace-nowrap overflow-hidden text-ellipsis">
+                                <span className={`inline-block text-[8px] px-2 py-0.5 rounded-full shadow-sm ${getShiftStyle(currentTeamShiftType)}`}>{selectedTeam}: {currentTeamShiftType}</span>
                             </div>
                         )
                     ) : (
