@@ -1694,12 +1694,20 @@ const LeaveDatePage: React.FC = () => {
                         if (record.period === 'fullDay') {
                             const suggestions = getHalfDayOvertimeSuggestions(team, date);
                             let first = '';
+                            let firstTeam = suggestions.firstHalf;
                             let second = '';
+                            let secondTeam = suggestions.secondHalf;
                             if (record.fullDayOvertime?.type === '加一半') {
-                                first = record.fullDayOvertime.firstHalfMember?.name || '';
-                                second = record.fullDayOvertime.secondHalfMember?.name || '';
+                                if (record.fullDayOvertime.firstHalfMember?.name) {
+                                    first = record.fullDayOvertime.firstHalfMember.name;
+                                    firstTeam = record.fullDayOvertime.firstHalfMember.team + '班';
+                                }
+                                if (record.fullDayOvertime.secondHalfMember?.name) {
+                                    second = record.fullDayOvertime.secondHalfMember.name;
+                                    secondTeam = record.fullDayOvertime.secondHalfMember.team + '班';
+                                }
                             }
-                            overtimePeople = `前${suggestions.firstHalf}${first ? ' ' + first : ''}   後${suggestions.secondHalf}${second ? ' ' + second : ''}`;
+                            overtimePeople = `前${firstTeam}${first ? ' ' + first : ''}   後${secondTeam}${second ? ' ' + second : ''}`;
                             if (record.fullDayOvertime?.type === '加整班' && record.fullDayOvertime.fullDayMember) {
                                 overtimePeople = record.fullDayOvertime.fullDayMember.name;
                             }
