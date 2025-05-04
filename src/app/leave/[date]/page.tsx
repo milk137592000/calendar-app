@@ -387,7 +387,7 @@ const LeaveDatePage: React.FC = () => {
                                         加班人員：{record.fullDayOvertime.firstHalfMember.name} ({record.fullDayOvertime.firstHalfMember.team}班)
                                     </p>
                                     <button
-                                        onClick={() => handleUpdateOvertimeConfirm(record, false, 'first')}
+                                        onClick={() => handleCancelOvertime(record)}
                                         className="w-full mt-2 px-3 py-2 text-sm font-medium text-white bg-red-500 rounded-md hover:bg-red-600"
                                     >
                                         取消前半加班
@@ -412,7 +412,7 @@ const LeaveDatePage: React.FC = () => {
                                     {record.fullDayOvertime?.firstHalfMember?.name && !record.fullDayOvertime?.firstHalfMember?.confirmed && (
                                         <button
                                             onClick={() => handleUpdateOvertimeConfirm(record, true, 'first')}
-                                            className="w-full mt-2 px-3 py-2 text-sm font-medium text-white bg-green-500 rounded-md hover:bg-green-600"
+                                            className="w-full sm:w-auto mt-2 sm:mt-0 px-2 py-1 text-xs font-medium text-white bg-green-500 rounded-md hover:bg-green-600 whitespace-nowrap"
                                         >
                                             確認前半加班
                                         </button>
@@ -435,7 +435,7 @@ const LeaveDatePage: React.FC = () => {
                                         加班人員：{record.fullDayOvertime.secondHalfMember.name} ({record.fullDayOvertime.secondHalfMember.team}班)
                                     </p>
                                     <button
-                                        onClick={() => handleUpdateOvertimeConfirm(record, false, 'second')}
+                                        onClick={() => handleCancelOvertime(record)}
                                         className="w-full mt-2 px-3 py-2 text-sm font-medium text-white bg-red-500 rounded-md hover:bg-red-600"
                                     >
                                         取消後半加班
@@ -460,7 +460,7 @@ const LeaveDatePage: React.FC = () => {
                                     {record.fullDayOvertime?.secondHalfMember?.name && !record.fullDayOvertime?.secondHalfMember?.confirmed && (
                                         <button
                                             onClick={() => handleUpdateOvertimeConfirm(record, true, 'second')}
-                                            className="w-full mt-2 px-3 py-2 text-sm font-medium text-white bg-green-500 rounded-md hover:bg-green-600"
+                                            className="w-full sm:w-auto mt-2 sm:mt-0 px-2 py-1 text-xs font-medium text-white bg-green-500 rounded-md hover:bg-green-600 whitespace-nowrap"
                                         >
                                             確認後半加班
                                         </button>
@@ -587,10 +587,10 @@ const LeaveDatePage: React.FC = () => {
 
                                             {record.fullDayOvertime?.firstHalfMember?.name && !record.fullDayOvertime?.firstHalfMember?.confirmed && (
                                                 <button
-                                                    onClick={() => handleUpdateOvertimeConfirm(record, true, 'first')}
-                                                    className="w-full sm:w-auto mt-2 sm:mt-0 px-2 py-1 text-xs font-medium text-white bg-green-500 rounded-md hover:bg-green-600 whitespace-nowrap"
+                                                    onClick={() => handleCancelOvertime(record)}
+                                                    className="w-full sm:w-auto mt-2 sm:mt-0 px-2 py-1 text-xs font-medium text-white bg-red-500 rounded-md hover:bg-red-600 whitespace-nowrap"
                                                 >
-                                                    確認前半加班
+                                                    取消前半加班
                                                 </button>
                                             )}
 
@@ -640,10 +640,10 @@ const LeaveDatePage: React.FC = () => {
 
                                             {record.fullDayOvertime?.secondHalfMember?.name && !record.fullDayOvertime?.secondHalfMember?.confirmed && (
                                                 <button
-                                                    onClick={() => handleUpdateOvertimeConfirm(record, true, 'second')}
-                                                    className="w-full sm:w-auto mt-2 sm:mt-0 px-2 py-1 text-xs font-medium text-white bg-green-500 rounded-md hover:bg-green-600 whitespace-nowrap"
+                                                    onClick={() => handleCancelOvertime(record)}
+                                                    className="w-full sm:w-auto mt-2 sm:mt-0 px-2 py-1 text-xs font-medium text-white bg-red-500 rounded-md hover:bg-red-600 whitespace-nowrap"
                                                 >
-                                                    確認後半加班
+                                                    取消後半加班
                                                 </button>
                                             )}
 
@@ -1296,13 +1296,18 @@ const LeaveDatePage: React.FC = () => {
         }
 
         try {
-            // 构建更新数据，确保仅更新指定的半班确认状态
-            const updateData = {
+            // 構建更新數據，取消確認時也清空人員資料
+            let updateData: any = {
                 date: record.date,
                 name: record.name,
                 confirm,
                 halfType
             };
+
+            // 如果是取消確認，同時清空相應的人員資料
+            if (!confirm && record.fullDayOvertime.type === '加一半') {
+                updateData.clearMember = true; // 標記需要清空人員資料
+            }
 
             const response = await fetch('/api/leave', {
                 method: 'PUT',
@@ -1331,22 +1336,53 @@ const LeaveDatePage: React.FC = () => {
         }
 
         try {
+            let requestBody: {
+                date: string;
+                name: string;
+                customOvertime?: {
+                    name: string;
+                    team: string;
+                    startTime: string;
+                    endTime: string;
+                    confirmed: boolean;
+                };
+                fullDayOvertime?: {
+                    type: string;
+                    fullDayMember?: undefined;
+                    firstHalfMember?: undefined;
+                    secondHalfMember?: undefined;
+                };
+            } = {
+                date: record.date,
+                name: record.name
+            };
+
+            // 如果是自定義時段加班
+            if (record.customOvertime) {
+                requestBody.customOvertime = {
+                    name: '',
+                    team: '',
+                    startTime: '',
+                    endTime: '',
+                    confirmed: false
+                };
+            } 
+            // 如果是全天加班
+            else if (record.fullDayOvertime) {
+                requestBody.fullDayOvertime = {
+                    type: '',
+                    fullDayMember: undefined,
+                    firstHalfMember: undefined,
+                    secondHalfMember: undefined
+                };
+            }
+
             const response = await fetch('/api/leave', {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({
-                    date: record.date,
-                    name: record.name,
-                    customOvertime: {
-                        name: '',
-                        team: '',
-                        startTime: '',
-                        endTime: '',
-                        confirmed: false
-                    }
-                }),
+                body: JSON.stringify(requestBody),
             });
 
             if (!response.ok) {
@@ -1699,30 +1735,64 @@ const LeaveDatePage: React.FC = () => {
                             let secondTeam = suggestions.secondHalf;
                             let firstMissing = true;
                             let secondMissing = true;
+                            
                             if (record.fullDayOvertime?.type === '加一半') {
                                 if (record.fullDayOvertime.firstHalfMember?.name) {
                                     first = record.fullDayOvertime.firstHalfMember.name;
-                                    firstTeam = record.fullDayOvertime.firstHalfMember.team + '班';
+                                    firstTeam = record.fullDayOvertime.firstHalfMember.team;
                                     firstMissing = false;
                                 }
                                 if (record.fullDayOvertime.secondHalfMember?.name) {
                                     second = record.fullDayOvertime.secondHalfMember.name;
-                                    secondTeam = record.fullDayOvertime.secondHalfMember.team + '班';
+                                    secondTeam = record.fullDayOvertime.secondHalfMember.team;
                                     secondMissing = false;
                                 }
-                            }
-                            overtimePeople = (
-                                <>
-                                    <span>前{firstTeam} {firstMissing ? <span className="text-red-500">缺</span> : first}</span>
-                                    <span className="mx-2" />
-                                    <span>後{secondTeam} {secondMissing ? <span className="text-red-500">缺</span> : second}</span>
-                                </>
-                            );
-                            if (record.fullDayOvertime?.type === '加整班' && record.fullDayOvertime.fullDayMember) {
-                                overtimePeople = record.fullDayOvertime.fullDayMember.name;
+
+                                // 顯示班別名稱，添加班字
+                                if (firstTeam && !firstTeam.endsWith('班')) {
+                                    firstTeam = firstTeam + '班';
+                                }
+                                if (secondTeam && !secondTeam.endsWith('班')) {
+                                    secondTeam = secondTeam + '班';
+                                }
+
+                                overtimePeople = (
+                                    <>
+                                        <span>
+                                            <span className="text-xs">前{firstTeam}</span>{' '}
+                                            {firstMissing ? <span className="text-red-500">缺</span> : first}
+                                        </span>
+                                        <span className="mx-2" />
+                                        <span>
+                                            <span className="text-xs">後{secondTeam}</span>{' '}
+                                            {secondMissing ? <span className="text-red-500">缺</span> : second}
+                                        </span>
+                                    </>
+                                );
+                            } else if (record.fullDayOvertime?.type === '加整班' && record.fullDayOvertime.fullDayMember) {
+                                overtimePeople = (
+                                    <span className="flex items-center justify-center">
+                                        <span>{record.fullDayOvertime.fullDayMember.name}</span>
+                                        <span className="text-xs ml-1">({record.fullDayOvertime.fullDayMember.team}班)</span>
+                                    </span>
+                                );
+                            } else if (record.fullDayOvertime?.type === '加整班') {
+                                // 如果選了加整班但還沒指派人員
+                                const bigRestTeam = getBigRestTeam();
+                                overtimePeople = (
+                                    <span>
+                                        <span className="text-xs">{bigRestTeam ? bigRestTeam + '班 ' : ''}</span>
+                                        <span className="text-red-500">缺</span>
+                                    </span>
+                                );
                             }
                         } else if (record.customOvertime?.name) {
-                            overtimePeople = record.customOvertime.name;
+                            overtimePeople = (
+                                <span className="flex items-center justify-center">
+                                    <span>{record.customOvertime.name}</span>
+                                    <span className="text-xs ml-1">({record.customOvertime.team}班)</span>
+                                </span>
+                            );
                         }
                         
                         return (
