@@ -4,7 +4,7 @@ import React from 'react';
 import { format, isSameDay } from 'date-fns';
 import { zhTW } from 'date-fns/locale';
 import { TEAMS } from '@/data/teams';
-import { getShiftForDate, calculateTeamDeficit, getMemberRole } from '@/utils/schedule';
+import { getShiftForDate, calculateTeamDeficit, getMemberRole, getMemberTeam } from '@/utils/schedule';
 import type { LeaveRecord } from '@/types/LeaveRecord';
 import type { DaySchedule } from '@/types/schedule';
 
@@ -36,7 +36,7 @@ const CalendarCell: React.FC<CalendarCellProps> = ({
 
     // 計算每個班級的差額
     const deficits = Object.keys(TEAMS)
-        .filter(team => !selectedTeam || team === selectedTeam) // 只計算選中的班級的差額
+        .filter(team => !selectedTeam || team === selectedTeam)
         .map(team => {
             const deficit = calculateTeamDeficit(team, date);
             return deficit;
@@ -70,6 +70,93 @@ const CalendarCell: React.FC<CalendarCellProps> = ({
             default:
                 return 'bg-gray-100 text-gray-600';
         }
+    };
+
+    // 獲取當天的大休班級
+    const getBigRestTeam = () => {
+        for (const [team, shift] of Object.entries(shifts)) {
+            if (shift === '大休') {
+                return team;
+            }
+        }
+        return null;
+    };
+
+    // 獲取建議加班班級
+    const getSuggestedOvertimeTeams = (record: LeaveRecord) => {
+        const suggestions = new Set<string>();
+        const leaveTeam = getMemberTeam(record.name);
+        const leaveShift = leaveTeam ? shifts[leaveTeam as keyof typeof shifts] : null;
+
+        // 如果是全天請假
+        if (record.period === 'fullDay') {
+            // 如果已經有加班人員，不顯示建議
+            if (record.fullDayOvertime?.type === '加整班' && record.fullDayOvertime.fullDayMember?.confirmed) {
+                return [];
+            }
+            if (record.fullDayOvertime?.type === '加一半' && 
+                record.fullDayOvertime.firstHalfMember?.confirmed && 
+                record.fullDayOvertime.secondHalfMember?.confirmed) {
+                return [];
+            }
+
+            // 獲取建議班級
+            const bigRestTeam = getBigRestTeam();
+            if (bigRestTeam) {
+                suggestions.add(bigRestTeam);
+            }
+        } 
+        // 如果是自定義時段請假
+        else if (typeof record.period === 'object' && record.period.type === 'custom') {
+            const startTime = record.period.startTime;
+            const endTime = record.period.endTime;
+            const leaveTeam = getMemberTeam(record.name);
+            const leaveShift = leaveTeam ? shifts[leaveTeam as keyof typeof shifts] : null;
+
+            // 檢查是否與上一班結束時間重疊
+            if (leaveShift === '中班' && startTime === '1615') {
+                const prevTeam = Object.entries(shifts).find(([_, shift]) => shift === '早班')?.[0];
+                if (prevTeam) suggestions.add(prevTeam);
+            }
+            if (leaveShift === '夜班' && startTime === '2315') {
+                const prevTeam = Object.entries(shifts).find(([_, shift]) => shift === '中班')?.[0];
+                if (prevTeam) suggestions.add(prevTeam);
+            }
+
+            // 檢查是否與下一班開始時間重疊
+            if (leaveShift === '早班' && endTime === '1615') {
+                const nextTeam = Object.entries(shifts).find(([_, shift]) => shift === '中班')?.[0];
+                if (nextTeam) suggestions.add(nextTeam);
+            }
+            if (leaveShift === '中班' && endTime === '2315') {
+                const nextTeam = Object.entries(shifts).find(([_, shift]) => shift === '夜班')?.[0];
+                if (nextTeam) suggestions.add(nextTeam);
+            }
+        }
+
+        return Array.from(suggestions);
+    };
+
+    // 判斷是否應該顯示請假記錄
+    const shouldShowLeaveRecord = (record: LeaveRecord) => {
+        // 如果當前班級是大休，顯示所有未找齊加班人員的請假記錄
+        if (selectedTeam && shifts[selectedTeam as keyof typeof shifts] === '大休') {
+            const isOvertimeComplete = record.fullDayOvertime?.type === '加整班'
+                ? record.fullDayOvertime.fullDayMember?.confirmed
+                : record.fullDayOvertime?.type === '加一半' &&
+                  record.fullDayOvertime.firstHalfMember?.confirmed &&
+                  record.fullDayOvertime.secondHalfMember?.confirmed;
+            const hasConfirmedCustomOvertime = record.customOvertime?.confirmed;
+            return !isOvertimeComplete && !hasConfirmedCustomOvertime;
+        }
+
+        // 如果當前班級在建議加班班級列表中，顯示請假記錄
+        if (selectedTeam) {
+            const suggestedTeams = getSuggestedOvertimeTeams(record);
+            return suggestedTeams.includes(selectedTeam);
+        }
+
+        return false;
     };
 
     return (
@@ -108,6 +195,11 @@ const CalendarCell: React.FC<CalendarCellProps> = ({
             {isLeaveMode && dayLeaveRecords.length > 0 && (
                 <div className="flex flex-col justify-center items-center gap-1 w-full mt-1">
                     {dayLeaveRecords.map((record, idx) => {
+                        // 判斷是否應該顯示這條請假記錄
+                        if (!shouldShowLeaveRecord(record)) {
+                            return null;
+                        }
+
                         // 判斷加班是否已確認
                         const isOvertimeComplete = record.fullDayOvertime?.type === '加整班'
                             ? record.fullDayOvertime.fullDayMember?.confirmed
@@ -116,6 +208,7 @@ const CalendarCell: React.FC<CalendarCellProps> = ({
                               record.fullDayOvertime.secondHalfMember?.confirmed;
                         const hasConfirmedCustomOvertime = record.customOvertime?.confirmed;
                         const isConfirmed = isOvertimeComplete || hasConfirmedCustomOvertime;
+                        
                         // 判斷班長/班員顏色
                         const role = getMemberRole(record.name);
                         let tagClass = '';
@@ -126,28 +219,19 @@ const CalendarCell: React.FC<CalendarCellProps> = ({
                         } else {
                             tagClass = 'bg-blue-100 text-blue-700';
                         }
-                        // 找出 team
-                        const team = Object.entries(TEAMS).find(([_, teamData]) =>
-                            teamData.members.some(member => member.name === record.name)
-                        )?.[0] || '';
                         
                         // 根據請假人數調整字體大小
                         const fontSizeClass = dayLeaveRecords.length > 4 
                             ? 'text-[7px]' 
                             : 'text-[9px]';
-                        
-                        // 根據請假人數調整內邊距
-                        const paddingClass = dayLeaveRecords.length > 4
-                            ? 'px-1 py-0.25'
-                            : 'px-2 py-0.5';
-                            
+
                         return (
-                            <span
+                            <div
                                 key={idx}
-                                className={`${fontSizeClass} ${paddingClass} rounded-full font-medium whitespace-nowrap ${tagClass}`}
+                                className={`${tagClass} ${fontSizeClass} px-1 py-0.5 rounded whitespace-nowrap`}
                             >
-                                {record.name}<span className={`${dayLeaveRecords.length > 4 ? 'text-[6px]' : 'text-[8px]'} align-middle`}>{team}</span>
-                            </span>
+                                {record.name}
+                            </div>
                         );
                     })}
                 </div>
