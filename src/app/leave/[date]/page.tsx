@@ -1701,10 +1701,16 @@ const LeaveDatePage: React.FC = () => {
                                 if (record.fullDayOvertime.firstHalfMember?.name) {
                                     first = record.fullDayOvertime.firstHalfMember.name;
                                     firstTeam = record.fullDayOvertime.firstHalfMember.team + '班';
+                                } else {
+                                    first = '';
+                                    firstTeam = suggestions.firstHalf;
                                 }
                                 if (record.fullDayOvertime.secondHalfMember?.name) {
                                     second = record.fullDayOvertime.secondHalfMember.name;
                                     secondTeam = record.fullDayOvertime.secondHalfMember.team + '班';
+                                } else {
+                                    second = '';
+                                    secondTeam = suggestions.secondHalf;
                                 }
                             }
                             overtimePeople = `前${firstTeam}${first ? ' ' + first : ''}   後${secondTeam}${second ? ' ' + second : ''}`;
