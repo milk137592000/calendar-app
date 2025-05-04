@@ -168,16 +168,7 @@ const CalendarCell: React.FC<CalendarCellProps> = ({
     const shouldShowLeaveRecord = (record: LeaveRecord) => {
         // 請假模式下，所有班級都顯示請假資訊
         if (isLeaveMode) return true;
-        // 其他情境維持原本邏輯 + 若本班目前缺人則顯示
-        if (selectedTeam) {
-            // 若本班是缺班級，且該段尚未被加班填補，則顯示
-            const deficitTeams = getDeficitTeams(record);
-            if (deficitTeams.includes(selectedTeam)) return true;
-            // 原本的建議加班班級顯示
-            const suggestedTeams = getSuggestedOvertimeTeams(record);
-            return suggestedTeams.includes(selectedTeam);
-        }
-        // 大休班級維持原本邏輯
+        // 先判斷大休班級
         if (selectedTeam && shifts[selectedTeam as keyof typeof shifts] === '大休') {
             const isOvertimeComplete = record.fullDayOvertime?.type === '加整班'
                 ? record.fullDayOvertime.fullDayMember?.confirmed
@@ -186,6 +177,15 @@ const CalendarCell: React.FC<CalendarCellProps> = ({
                   record.fullDayOvertime.secondHalfMember?.confirmed;
             const hasConfirmedCustomOvertime = record.customOvertime?.confirmed;
             return !isOvertimeComplete && !hasConfirmedCustomOvertime;
+        }
+        // 再判斷缺班級
+        if (selectedTeam) {
+            const deficitTeams = getDeficitTeams(record);
+            if (deficitTeams.includes(selectedTeam)) return true;
+            // 再判斷建議加班班級
+            const suggestedTeams = getSuggestedOvertimeTeams(record);
+            if (suggestedTeams.includes(selectedTeam)) return true;
+            return false;
         }
         return false;
     };
