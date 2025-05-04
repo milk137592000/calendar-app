@@ -137,61 +137,23 @@ const CalendarCell: React.FC<CalendarCellProps> = ({
         return Array.from(suggestions);
     };
 
-    // 取得目前缺班級（根據請假單 overtime 狀態）
-    const getDeficitTeams = (record: LeaveRecord) => {
-        const teams: string[] = [];
-        // 全天請假
-        if (record.period === 'fullDay' && record.fullDayOvertime) {
-            if (record.fullDayOvertime.type === '加整班') {
-                if (!record.fullDayOvertime.fullDayMember?.confirmed && record.fullDayOvertime.fullDayMember?.team) {
-                    teams.push(record.fullDayOvertime.fullDayMember.team);
-                }
-            } else if (record.fullDayOvertime.type === '加一半') {
-                if (!record.fullDayOvertime.firstHalfMember?.confirmed && record.fullDayOvertime.firstHalfMember?.team) {
-                    teams.push(record.fullDayOvertime.firstHalfMember.team);
-                }
-                if (!record.fullDayOvertime.secondHalfMember?.confirmed && record.fullDayOvertime.secondHalfMember?.team) {
-                    teams.push(record.fullDayOvertime.secondHalfMember.team);
-                }
-            }
-        }
-        // 自定義時段請假
-        if (typeof record.period === 'object' && record.period.type === 'custom' && record.customOvertime) {
-            if (!record.customOvertime.confirmed && record.customOvertime.team) {
-                teams.push(record.customOvertime.team);
-            }
-        }
-        return teams;
-    };
-
     // 判斷是否應該顯示請假記錄
     const shouldShowLeaveRecord = (record: LeaveRecord) => {
         // 請假模式下，所有班級都顯示請假資訊
         if (isLeaveMode) return true;
-        // 先判斷大休班級
+        // 其他情境維持原本邏輯
         if (selectedTeam && shifts[selectedTeam as keyof typeof shifts] === '大休') {
-            // 只要有任何一段沒補齊加班就顯示
-            let notFilled = false;
-            if (record.fullDayOvertime) {
-                if (record.fullDayOvertime.type === '加整班') {
-                    notFilled = !record.fullDayOvertime.fullDayMember?.confirmed;
-                } else if (record.fullDayOvertime.type === '加一半') {
-                    notFilled = !record.fullDayOvertime.firstHalfMember?.confirmed || !record.fullDayOvertime.secondHalfMember?.confirmed;
-                }
-            }
-            if (record.customOvertime) {
-                notFilled = notFilled || !record.customOvertime.confirmed;
-            }
-            return notFilled;
+            const isOvertimeComplete = record.fullDayOvertime?.type === '加整班'
+                ? record.fullDayOvertime.fullDayMember?.confirmed
+                : record.fullDayOvertime?.type === '加一半' &&
+                  record.fullDayOvertime.firstHalfMember?.confirmed &&
+                  record.fullDayOvertime.secondHalfMember?.confirmed;
+            const hasConfirmedCustomOvertime = record.customOvertime?.confirmed;
+            return !isOvertimeComplete && !hasConfirmedCustomOvertime;
         }
-        // 再判斷缺班級
         if (selectedTeam) {
-            const deficitTeams = getDeficitTeams(record);
-            if (deficitTeams.includes(selectedTeam)) return true;
-            // 再判斷建議加班班級
             const suggestedTeams = getSuggestedOvertimeTeams(record);
-            if (suggestedTeams.includes(selectedTeam)) return true;
-            return false;
+            return suggestedTeams.includes(selectedTeam);
         }
         return false;
     };
