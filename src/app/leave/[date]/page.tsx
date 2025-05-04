@@ -1691,15 +1691,18 @@ const LeaveDatePage: React.FC = () => {
                         
                         // 判斷加班人員
                         let overtimePeople = '';
-                        if (record.fullDayOvertime?.type === '加整班' && record.fullDayOvertime.fullDayMember) {
-                            overtimePeople = record.fullDayOvertime.fullDayMember.name;
-                        } else if (record.fullDayOvertime?.type === '加一半') {
-                            // 新增：取得建議班級
-                            const team = getMemberTeam(record.name) || undefined;
+                        if (record.period === 'fullDay') {
                             const suggestions = getHalfDayOvertimeSuggestions(team, date);
-                            const first = record.fullDayOvertime.firstHalfMember?.name;
-                            const second = record.fullDayOvertime.secondHalfMember?.name;
+                            let first = '';
+                            let second = '';
+                            if (record.fullDayOvertime?.type === '加一半') {
+                                first = record.fullDayOvertime.firstHalfMember?.name || '';
+                                second = record.fullDayOvertime.secondHalfMember?.name || '';
+                            }
                             overtimePeople = `前${suggestions.firstHalf}${first ? ' ' + first : ''}   後${suggestions.secondHalf}${second ? ' ' + second : ''}`;
+                            if (record.fullDayOvertime?.type === '加整班' && record.fullDayOvertime.fullDayMember) {
+                                overtimePeople = record.fullDayOvertime.fullDayMember.name;
+                            }
                         } else if (record.customOvertime?.name) {
                             overtimePeople = record.customOvertime.name;
                         }
