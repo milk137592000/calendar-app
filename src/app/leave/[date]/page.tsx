@@ -1769,13 +1769,25 @@ const LeaveDatePage: React.FC = () => {
                                 overtimePeople = (
                                     <>
                                         <span>
-                                            <span className="text-xs">前{firstTeam}</span>{' '}
-                                            {firstMissing ? <span className="text-red-500">缺</span> : first}
+                                            {firstMissing ? (
+                                                <span className="text-red-500">前{firstTeam} 缺</span>
+                                            ) : (
+                                                <span>
+                                                    <span className="text-xs">前{firstTeam}</span> {first}
+                                                    {!record.fullDayOvertime?.firstHalfMember?.confirmed && <span className="text-amber-500">(待確認)</span>}
+                                                </span>
+                                            )}
                                         </span>
                                         <span className="mx-2" />
                                         <span>
-                                            <span className="text-xs">後{secondTeam}</span>{' '}
-                                            {secondMissing ? <span className="text-red-500">缺</span> : second}
+                                            {secondMissing ? (
+                                                <span className="text-red-500">後{secondTeam} 缺</span>
+                                            ) : (
+                                                <span>
+                                                    <span className="text-xs">後{secondTeam}</span> {second}
+                                                    {!record.fullDayOvertime?.secondHalfMember?.confirmed && <span className="text-amber-500">(待確認)</span>}
+                                                </span>
+                                            )}
                                         </span>
                                     </>
                                 );
@@ -1850,7 +1862,7 @@ const LeaveDatePage: React.FC = () => {
                                                     <span className="text-xs ml-1">{record.fullDayOvertime.fullDayMember.team}</span>
                                                 </span>
                                             ) : (
-                                                <span>{overtimePeople || '—'}</span>
+                                                <span>{overtimePeople || <span className="text-red-500">缺</span>}</span>
                                             )}
                                         </div>
                                     ) : (
