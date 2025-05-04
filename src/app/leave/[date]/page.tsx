@@ -227,6 +227,7 @@ const LeaveDatePage: React.FC = () => {
     const touchStartX = useRef<number | null>(null);
     const touchEndX = useRef<number | null>(null);
     const [expandedIndexes, setExpandedIndexes] = useState<{[key:number]: {leave: boolean, overtime: boolean}}>({});
+    const [showLeaveForm, setShowLeaveForm] = useState(false);
 
     const toggleExpand = (index: number, type: 'leave' | 'overtime') => {
         setExpandedIndexes(prev => ({
@@ -1837,100 +1838,108 @@ const LeaveDatePage: React.FC = () => {
                 </button>
             </div>
             <div className="bg-white rounded-lg shadow-md p-4 md:p-6 mb-8">
-                <h2 className="text-lg font-semibold text-gray-800 mb-4">新增請假</h2>
-                <form onSubmit={e => { e.preventDefault(); handleSubmit(); }} className="space-y-4">
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">班級</label>
-                        <select
-                            value={selectedTeam}
-                            onChange={e => setSelectedTeam(e.target.value)}
-                            className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
-                        >
-                            <option value="">請選擇班級</option>
-                            {teamOptions.map(option => (
-                                <option key={option.value} value={option.value} disabled={!option.canLeave}>
-                                    {option.label}
-                                </option>
-                            ))}
-                        </select>
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">人員</label>
-                        <select
-                            value={selectedMember}
-                            onChange={e => setSelectedMember(e.target.value)}
-                            className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
-                            disabled={!selectedTeam}
-                        >
-                            <option value="">請選擇人員</option>
-                            {getAvailableMembers(selectedTeam).map(name => (
-                                <option key={name} value={name}>{name}</option>
-                            ))}
-                        </select>
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">請假時段</label>
-                        <div className="flex gap-2">
-                            <label className="flex items-center">
-                                <input
-                                    type="radio"
-                                    name="period"
-                                    value="fullDay"
-                                    checked={selectedPeriod === 'fullDay'}
-                                    onChange={() => setSelectedPeriod('fullDay')}
-                                />
-                                <span className="ml-1">全天</span>
-                            </label>
-                            <label className="flex items-center">
-                                <input
-                                    type="radio"
-                                    name="period"
-                                    value="custom"
-                                    checked={selectedPeriod === 'custom'}
-                                    onChange={() => setSelectedPeriod('custom')}
-                                />
-                                <span className="ml-1">自定義時段</span>
-                            </label>
-                        </div>
-                    </div>
-                    {selectedPeriod === 'custom' && (
-                        <div className="flex gap-2">
-                            <div className="flex-1">
-                                <label className="block text-xs text-gray-500 mb-1">開始時間</label>
-                                <select
-                                    value={customStartTime}
-                                    onChange={e => setCustomStartTime(e.target.value)}
-                                    className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
-                                >
-                                    <option value="">請選擇</option>
-                                    {timeOptions.map(time => (
-                                        <option key={time} value={time}>{formatTimeDisplay(time)}</option>
-                                    ))}
-                                </select>
-                            </div>
-                            <div className="flex-1">
-                                <label className="block text-xs text-gray-500 mb-1">結束時間</label>
-                                <select
-                                    value={customEndTime}
-                                    onChange={e => setCustomEndTime(e.target.value)}
-                                    className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
-                                >
-                                    <option value="">請選擇</option>
-                                    {endTimeOptions.map(time => (
-                                        <option key={time} value={time}>{formatTimeDisplay(time)}</option>
-                                    ))}
-                                </select>
-                            </div>
-                        </div>
-                    )}
+                {!showLeaveForm ? (
                     <button
-                        type="submit"
-                        disabled={isSubmitting}
-                        className="w-full px-3 py-2 text-sm font-medium text-white rounded-md bg-blue-500 hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                        className="w-full px-3 py-2 text-sm font-medium text-white rounded-md bg-blue-500 hover:bg-blue-600"
+                        onClick={() => setShowLeaveForm(true)}
                     >
-                        送出請假申請
+                        我要請假
                     </button>
-                </form>
+                ) : (
+                    <form onSubmit={e => { e.preventDefault(); handleSubmit(); }} className="space-y-4">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">班級</label>
+                            <select
+                                value={selectedTeam}
+                                onChange={e => setSelectedTeam(e.target.value)}
+                                className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
+                            >
+                                <option value="">請選擇班級</option>
+                                {teamOptions.map(option => (
+                                    <option key={option.value} value={option.value} disabled={!option.canLeave}>
+                                        {option.label}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">人員</label>
+                            <select
+                                value={selectedMember}
+                                onChange={e => setSelectedMember(e.target.value)}
+                                className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
+                                disabled={!selectedTeam}
+                            >
+                                <option value="">請選擇人員</option>
+                                {getAvailableMembers(selectedTeam).map(name => (
+                                    <option key={name} value={name}>{name}</option>
+                                ))}
+                            </select>
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">請假時段</label>
+                            <div className="flex gap-2">
+                                <label className="flex items-center">
+                                    <input
+                                        type="radio"
+                                        name="period"
+                                        value="fullDay"
+                                        checked={selectedPeriod === 'fullDay'}
+                                        onChange={() => setSelectedPeriod('fullDay')}
+                                    />
+                                    <span className="ml-1">全天</span>
+                                </label>
+                                <label className="flex items-center">
+                                    <input
+                                        type="radio"
+                                        name="period"
+                                        value="custom"
+                                        checked={selectedPeriod === 'custom'}
+                                        onChange={() => setSelectedPeriod('custom')}
+                                    />
+                                    <span className="ml-1">自定義時段</span>
+                                </label>
+                            </div>
+                        </div>
+                        {selectedPeriod === 'custom' && (
+                            <div className="flex gap-2">
+                                <div className="flex-1">
+                                    <label className="block text-xs text-gray-500 mb-1">開始時間</label>
+                                    <select
+                                        value={customStartTime}
+                                        onChange={e => setCustomStartTime(e.target.value)}
+                                        className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
+                                    >
+                                        <option value="">請選擇</option>
+                                        {timeOptions.map(time => (
+                                            <option key={time} value={time}>{formatTimeDisplay(time)}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div className="flex-1">
+                                    <label className="block text-xs text-gray-500 mb-1">結束時間</label>
+                                    <select
+                                        value={customEndTime}
+                                        onChange={e => setCustomEndTime(e.target.value)}
+                                        className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
+                                    >
+                                        <option value="">請選擇</option>
+                                        {endTimeOptions.map(time => (
+                                            <option key={time} value={time}>{formatTimeDisplay(time)}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            </div>
+                        )}
+                        <button
+                            type="submit"
+                            disabled={isSubmitting}
+                            className="w-full px-3 py-2 text-sm font-medium text-white rounded-md bg-blue-500 hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                        >
+                            送出請假申請
+                        </button>
+                    </form>
+                )}
             </div>
             {renderLeaveRecords()}
         </div>
