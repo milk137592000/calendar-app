@@ -1238,6 +1238,15 @@ const LeaveDatePage: React.FC = () => {
             }));
         }
 
+        // 新增：選擇人員後自動展開加班卡
+        setExpandedIndexes(prev => ({
+            ...prev,
+            [leaveRecords.findIndex(r => r._id === record._id)]: {
+                ...(prev[leaveRecords.findIndex(r => r._id === record._id)] || {}),
+                overtime: true
+            }
+        }));
+
         if (!memberName || !record.date || !record.name) {
             console.log('Missing required data:', { memberName, date: record.date, name: record.name });
             return;
