@@ -405,7 +405,7 @@ export async function DELETE(request: Request) {
 export async function PUT(request: Request) {
     try {
         const body = await request.json();
-        const { date, name, fullDayOvertime, customOvertime, confirm, halfType } = body;
+        const { date, name, fullDayOvertime, customOvertime, confirm, halfType, clearOvertime } = body;
 
         if (!date || !name) {
             return NextResponse.json(
@@ -423,6 +423,15 @@ export async function PUT(request: Request) {
                 { error: '找不到請假記錄' },
                 { status: 404 }
             );
+        }
+
+        // 明確處理取消加班的請求
+        if (clearOvertime) {
+            console.log('處理取消加班請求:', { date, name });
+            record.fullDayOvertime = undefined;
+            record.customOvertime = undefined;
+            await record.save();
+            return NextResponse.json(record);
         }
 
         // 處理確認狀態的更新
@@ -493,7 +502,7 @@ export async function PUT(request: Request) {
                             confirmed: fullDayOvertime.firstHalfMember.confirmed || false
                         };
                     }
-                    
+
                     // 處理後半加班
                     if (fullDayOvertime.secondHalfMember) {
                         record.fullDayOvertime.secondHalfMember = {

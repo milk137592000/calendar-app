@@ -1403,9 +1403,11 @@ const LeaveDatePage: React.FC = () => {
                     firstHalfMember?: undefined;
                     secondHalfMember?: undefined;
                 };
+                clearOvertime?: boolean;
             } = {
                 date: record.date,
-                name: record.name
+                name: record.name,
+                clearOvertime: true  // 明確告知後端這是取消加班的請求
             };
 
             // 如果是自定義時段加班
