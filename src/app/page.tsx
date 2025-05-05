@@ -56,18 +56,23 @@ const generateSchedules = (year: number, month: number): DaySchedule[] => {
 
 export default function Home() {
     const router = useRouter();
-    const [currentDate, setCurrentDate] = useState(() => {
-        const today = new Date();
-        // 確保日期設置為當天的開始時間
-        today.setHours(0, 0, 0, 0);
-        return today;
-    });
+    const [currentDate, setCurrentDate] = useState<Date | null>(null);
     const [selectedTeam, setSelectedTeam] = useState<string>('請假'); // 預設顯示請假日曆
     const [leaveRecords, setLeaveRecords] = useState<LeaveRecord[]>([]);
     const [userName, setUserName] = useState<string>('');
 
+    // 僅在 client 端初始化 currentDate
+    React.useEffect(() => {
+        if (!currentDate) {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            setCurrentDate(today);
+        }
+    }, [currentDate]);
+
     // 從 API 獲取請假記錄
     const fetchLeaveRecords = async () => {
+        if (!currentDate) return;
         try {
             const year = currentDate.getFullYear();
             const month = currentDate.getMonth() + 1;
@@ -82,13 +87,13 @@ export default function Home() {
 
     // 在組件掛載時和日期變更時獲取請假記錄
     React.useEffect(() => {
-        fetchLeaveRecords();
+        if (currentDate) fetchLeaveRecords();
     }, [currentDate]);
 
-    const schedules = generateSchedules(
+    const schedules = currentDate ? generateSchedules(
         currentDate.getFullYear(),
         currentDate.getMonth() + 1
-    );
+    ) : [];
 
     const handleToggleLeave = (date: Date) => {
         if (selectedTeam === '請假') {
@@ -150,7 +155,7 @@ export default function Home() {
                 </div>
                 <Calendar
                     schedules={schedules}
-                    currentDate={currentDate}
+                    currentDate={currentDate || new Date()}
                     onMonthChange={setCurrentDate}
                     selectedTeam={selectedTeam === '請假' ? undefined : selectedTeam}
                     isLeaveMode={selectedTeam === '請假'}
