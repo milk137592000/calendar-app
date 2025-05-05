@@ -1859,7 +1859,7 @@ const LeaveDatePage: React.FC = () => {
                                     <>
                                         <span>
                                             {firstMissing ? (
-                                                <span className="text-red-500">前{firstTeam} 缺</span>
+                                                <span><span className="text-xs">前{firstTeam}</span> <span className="text-red-500">缺</span></span>
                                             ) : (
                                                 <span>
                                                     <span className="text-xs">前{firstTeam}</span> {first}
@@ -1869,7 +1869,7 @@ const LeaveDatePage: React.FC = () => {
                                         <span className="mx-2" />
                                         <span>
                                             {secondMissing ? (
-                                                <span className="text-red-500">後{secondTeam} 缺</span>
+                                                <span><span className="text-xs">後{secondTeam}</span> <span className="text-red-500">缺</span></span>
                                             ) : (
                                                 <span>
                                                     <span className="text-xs">後{secondTeam}</span> {second}
@@ -1964,11 +1964,15 @@ const LeaveDatePage: React.FC = () => {
                                                             }
                                                             
                                                             return (
-                                                                <div className="flex flex-row items-center gap-2">
-                                                                    <span className="text-red-500">前{firstTeam} 缺</span>
-                                                                    <span className="mx-1"></span>
-                                                                    <span className="text-red-500">後{secondTeam} 缺</span>
-                                                                </div>
+                                                                <>
+                                                                    <span>
+                                                                        <span className="text-xs">前{firstTeam}</span> <span className="text-red-500">缺</span>
+                                                                    </span>
+                                                                    <span className="mx-2" />
+                                                                    <span>
+                                                                        <span className="text-xs">後{secondTeam}</span> <span className="text-red-500">缺</span>
+                                                                    </span>
+                                                                </>
                                                             );
                                                         })()}
                                                     </>
