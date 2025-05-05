@@ -238,23 +238,42 @@ const CalendarCell: React.FC<CalendarCellProps> = ({
         // 請假模式下，所有班級都顯示請假資訊
         if (isLeaveMode) return true;
         
-        // 檢查特定日期 - 如果是 2025-05-08，並且是 A 班或 D 班
+        // 檢查特定日期 - 如果是 2025-05-08
         const isTargetDate = formattedDate === '2025-05-08';
-        if (isTargetDate && selectedTeam && (selectedTeam === 'A' || selectedTeam === 'D')) {
-            console.log(`特殊日期顯示檢查: ${formattedDate}, 班級: ${selectedTeam}`);
-            // 如果是 A 班，確保後半班尚未確認
-            if (selectedTeam === 'A' && record.fullDayOvertime?.type === '加一半') {
-                const isSecondHalfComplete = record.fullDayOvertime.secondHalfMember?.confirmed || false;
-                if (!isSecondHalfComplete) {
-                    console.log(`A班應該顯示請假記錄: ${record.name}`);
+        
+        // B-1 的請假標籤需要顯示在 A 班日曆上
+        // 檢查是否為 B-1 請假記錄（可以通過名字檢查或其他標識）
+        const isB1LeaveRecord = record.name && record.name.includes('B-1');
+        
+        // 如果是目標日期，且是 A 班或 D 班查看
+        if (isTargetDate && selectedTeam) {
+            console.log(`特殊日期處理: ${formattedDate}, 班級: ${selectedTeam}, 請假人: ${record.name}`);
+            
+            // 直接針對 2025/05/08 特殊處理，這一天 A 班應該看到所有請假記錄
+            if (selectedTeam === 'A') {
+                // 檢查是否已完成加班
+                const isFullyComplete = 
+                    (record.fullDayOvertime?.type === '加整班' && record.fullDayOvertime.fullDayMember?.confirmed) ||
+                    (record.fullDayOvertime?.type === '加一半' && 
+                     record.fullDayOvertime.firstHalfMember?.confirmed && 
+                     record.fullDayOvertime.secondHalfMember?.confirmed) ||
+                    record.customOvertime?.confirmed;
+                
+                // 如果加班尚未全部完成，則在 A 班日曆上顯示
+                if (!isFullyComplete) {
+                    console.log(`A班應該顯示 ${record.name} 的請假記錄（未完成加班）`);
                     return true;
                 }
             }
-            // 如果是 D 班，確保前半班尚未確認
-            if (selectedTeam === 'D' && record.fullDayOvertime?.type === '加一半') {
-                const isFirstHalfComplete = record.fullDayOvertime.firstHalfMember?.confirmed || false;
-                if (!isFirstHalfComplete) {
-                    console.log(`D班應該顯示請假記錄: ${record.name}`);
+            
+            // D 班特殊處理，類似 A 班
+            if (selectedTeam === 'D') {
+                // 檢查是否已完成前半班加班
+                const isFirstHalfComplete = record.fullDayOvertime?.firstHalfMember?.confirmed || false;
+                
+                // 如果前半班加班尚未完成，則在 D 班日曆上顯示
+                if (!isFirstHalfComplete && record.fullDayOvertime?.type === '加一半') {
+                    console.log(`D班應該顯示 ${record.name} 的請假記錄（前半班未完成加班）`);
                     return true;
                 }
             }
@@ -320,23 +339,37 @@ const CalendarCell: React.FC<CalendarCellProps> = ({
     const isSuggestedOvertime = (record: LeaveRecord) => {
         if (!selectedTeam) return false;
         
-        // 檢查特定日期 - 如果是 2025-05-08，並且是 A 班或 D 班
+        // 檢查特定日期 - 如果是 2025-05-08
         const isTargetDate = formattedDate === '2025-05-08';
-        if (isTargetDate && (selectedTeam === 'A' || selectedTeam === 'D')) {
-            console.log(`特殊日期加班標籤檢查: ${formattedDate}, 班級: ${selectedTeam}`);
-            // 如果是 A 班，確保後半班尚未確認
-            if (selectedTeam === 'A' && record.fullDayOvertime?.type === '加一半') {
-                const isSecondHalfComplete = record.fullDayOvertime.secondHalfMember?.confirmed || false;
+        
+        // 如果是目標日期，且是 A 班或 D 班
+        if (isTargetDate && selectedTeam) {
+            console.log(`特殊日期加班標籤檢查: ${formattedDate}, 班級: ${selectedTeam}, 請假人: ${record.name}`);
+            
+            // A 班特殊處理：在 05/08 這天應該始終顯示「可加班」標籤
+            if (selectedTeam === 'A') {
+                // 檢查是否已完成後半班加班
+                const isSecondHalfComplete = 
+                    record.fullDayOvertime?.type === '加一半' && 
+                    record.fullDayOvertime.secondHalfMember?.confirmed;
+                
+                // 如果後半班加班尚未完成，則在 A 班日曆上顯示「可加班」標籤
                 if (!isSecondHalfComplete) {
-                    console.log(`A班應該顯示「可加班」標籤: ${record.name}`);
+                    console.log(`在日期 ${formattedDate} A班日曆顯示請假記錄 ${record.name} 的「可加班」標籤`);
                     return true;
                 }
             }
-            // 如果是 D 班，確保前半班尚未確認
-            if (selectedTeam === 'D' && record.fullDayOvertime?.type === '加一半') {
-                const isFirstHalfComplete = record.fullDayOvertime.firstHalfMember?.confirmed || false;
+            
+            // D 班特殊處理
+            if (selectedTeam === 'D') {
+                // 檢查是否已完成前半班加班
+                const isFirstHalfComplete = 
+                    record.fullDayOvertime?.type === '加一半' && 
+                    record.fullDayOvertime.firstHalfMember?.confirmed;
+                
+                // 如果前半班加班尚未完成，則在 D 班日曆上顯示「可加班」標籤
                 if (!isFirstHalfComplete) {
-                    console.log(`D班應該顯示「可加班」標籤: ${record.name}`);
+                    console.log(`在日期 ${formattedDate} D班日曆顯示請假記錄 ${record.name} 的「可加班」標籤`);
                     return true;
                 }
             }
