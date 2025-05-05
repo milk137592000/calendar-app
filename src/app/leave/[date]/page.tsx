@@ -1741,11 +1741,19 @@ const LeaveDatePage: React.FC = () => {
                 <div className="flex flex-row items-center gap-2 mt-1">
                     <span className="flex items-end">
                         <span className="text-[10px] font-bold">前{firstTeam}</span>
-                        <span className="text-[15px] ml-0.5">{firstMissing ? '缺' : first}</span>
+                        {firstMissing ? (
+                            <span className="text-[15px] ml-0.5 text-red-500">缺</span>
+                        ) : (
+                            <span className="text-[15px] ml-0.5">{first}</span>
+                        )}
                     </span>
                     <span className="flex items-end">
                         <span className="text-[10px] font-bold">後{secondTeam}</span>
-                        <span className="text-[15px] ml-0.5">{secondMissing ? '缺' : second}</span>
+                        {secondMissing ? (
+                            <span className="text-[15px] ml-0.5 text-red-500">缺</span>
+                        ) : (
+                            <span className="text-[15px] ml-0.5">{second}</span>
+                        )}
                     </span>
                 </div>
             );
