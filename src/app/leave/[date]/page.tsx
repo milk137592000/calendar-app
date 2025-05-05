@@ -1710,13 +1710,53 @@ const LeaveDatePage: React.FC = () => {
         const team = getMemberTeam(record.name) || undefined;
         const memberRole = team ? getMemberRole(record.name) : undefined;
         const teamShift = team ? getTeamShift(team, date) : null;
-
+        // 加班卡簡易模式
+        let overtimeSimple = null;
+        if (record.fullDayOvertime?.type === '加一半') {
+            const suggestions = getHalfDayOvertimeSuggestions(team, date);
+            let first = '';
+            let firstTeam = suggestions.firstHalf;
+            let second = '';
+            let secondTeam = suggestions.secondHalf;
+            let firstMissing = true;
+            let secondMissing = true;
+            if (record.fullDayOvertime.firstHalfMember?.name) {
+                first = record.fullDayOvertime.firstHalfMember.name;
+                firstTeam = record.fullDayOvertime.firstHalfMember.team;
+                firstMissing = false;
+            }
+            if (record.fullDayOvertime.secondHalfMember?.name) {
+                second = record.fullDayOvertime.secondHalfMember.name;
+                secondTeam = record.fullDayOvertime.secondHalfMember.team;
+                secondMissing = false;
+            }
+            // 顯示班別名稱，添加班字
+            if (firstTeam && !firstTeam.endsWith('班')) {
+                firstTeam = firstTeam + '班';
+            }
+            if (secondTeam && !secondTeam.endsWith('班')) {
+                secondTeam = secondTeam + '班';
+            }
+            overtimeSimple = (
+                <div className="flex flex-row items-center gap-2 mt-1">
+                    <span className="flex items-end">
+                        <span className="text-[10px] font-bold">前{firstTeam}</span>
+                        <span className="text-[15px] ml-0.5">{firstMissing ? '缺' : first}</span>
+                    </span>
+                    <span className="flex items-end">
+                        <span className="text-[10px] font-bold">後{secondTeam}</span>
+                        <span className="text-[15px] ml-0.5">{secondMissing ? '缺' : second}</span>
+                    </span>
+                </div>
+            );
+        }
         return (
             <div className="space-y-2">
                 <p className="text-gray-700"><span className="font-medium">請假人員：</span>{record.name} ({memberRole || '未知'})</p>
                 <p className="text-gray-700"><span className="font-medium">所屬班級：</span>{team}</p>
                 <p className="text-gray-700"><span className="font-medium">當天班別：</span>{teamShift || '未排班'}</p>
                 <p className="text-xs text-gray-700 whitespace-nowrap"><span className="font-medium">請假時段：</span>一整天</p>
+                {overtimeSimple}
                 <div className="mt-2">
                     <button onClick={e => {e.stopPropagation(); handleDelete(record);}} className="px-3 py-1 text-sm font-medium text-red-600 bg-red-50 border border-red-200 rounded-md hover:bg-red-100">取消請假</button>
                 </div>
