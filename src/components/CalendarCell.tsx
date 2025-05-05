@@ -246,6 +246,53 @@ const CalendarCell: React.FC<CalendarCellProps> = ({
                             </div>
                         );
                     })}
+                    {/* 加班卡簡易模式 */}
+                    {dayLeaveRecords.map((record, idx) => {
+                        if (
+                            record.period === 'fullDay' &&
+                            record.fullDayOvertime?.type === '加一半'
+                        ) {
+                            // 取得建議班級
+                            const bigRestTeam = getBigRestTeam();
+                            const firstHalf = record.fullDayOvertime.firstHalfMember;
+                            const secondHalf = record.fullDayOvertime.secondHalfMember;
+                            // 前半
+                            let firstText = '';
+                            let firstClass = 'text-xs';
+                            let firstStatus = '';
+                            if (firstHalf && firstHalf.name) {
+                                firstText = bigRestTeam ? bigRestTeam : '—';
+                                firstStatus = firstHalf.name;
+                            } else {
+                                firstText = bigRestTeam ? bigRestTeam : '—';
+                                firstStatus = '缺';
+                            }
+                            // 後半
+                            let secondText = '';
+                            let secondClass = 'text-xs';
+                            let secondStatus = '';
+                            if (secondHalf && secondHalf.name) {
+                                secondText = bigRestTeam ? bigRestTeam : '—';
+                                secondStatus = secondHalf.name;
+                            } else {
+                                secondText = bigRestTeam ? bigRestTeam : '—';
+                                secondStatus = '缺';
+                            }
+                            return (
+                                <div key={idx + '-overtime-simple'} className="flex flex-row items-center gap-2 mt-1">
+                                    <span className="flex items-end">
+                                        <span className="text-[10px] font-bold">前{firstText}</span>
+                                        <span className="text-[15px] ml-0.5">{firstStatus}</span>
+                                    </span>
+                                    <span className="flex items-end">
+                                        <span className="text-[10px] font-bold">後{secondText}</span>
+                                        <span className="text-[15px] ml-0.5">{secondStatus}</span>
+                                    </span>
+                                </div>
+                            );
+                        }
+                        return null;
+                    })}
                 </div>
             )}
         </div>
