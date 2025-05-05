@@ -85,20 +85,15 @@ const CalendarCell: React.FC<CalendarCellProps> = ({
     // 獲取建議加班班級
     const getSuggestedOvertimeTeams = (record: LeaveRecord) => {
         const suggestions = new Set<string>();
-        const leaveTeam = getMemberTeam(record.name);
-        const leaveShift = leaveTeam ? shifts[leaveTeam as keyof typeof shifts] : null;
-        const isTargetDate = formattedDate === '2025-05-08';
-
         if (record.period === 'fullDay' && record.fullDayOvertime?.type === '加一半') {
-            // 後半班缺
-            if (!record.fullDayOvertime.secondHalfMember?.confirmed) {
-                // 有 team 就用 team，沒有就推算 A
-                const team = record.fullDayOvertime.secondHalfMember?.team || 'A';
-                suggestions.add(team);
-            }
             // 前半班缺
             if (!record.fullDayOvertime.firstHalfMember?.confirmed) {
-                const team = record.fullDayOvertime.firstHalfMember?.team || 'D';
+                const team = record.fullDayOvertime.firstHalfMember?.team || 'A';
+                suggestions.add(team);
+            }
+            // 後半班缺
+            if (!record.fullDayOvertime.secondHalfMember?.confirmed) {
+                const team = record.fullDayOvertime.secondHalfMember?.team || 'A';
                 suggestions.add(team);
             }
         } else if (record.period === 'fullDay' && record.fullDayOvertime?.type === '加整班') {
