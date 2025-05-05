@@ -17,6 +17,12 @@ interface CalendarCellProps {
     onToggleLeave?: (date: Date) => void;
     isToday: boolean;
     lunarDate?: string;
+    daySchedule?: {
+        date: string;
+        shifts: DaySchedule['shifts'];
+        leaveRecords?: LeaveRecord[];
+        holidays?: string[];
+    };
 }
 
 const CalendarCell: React.FC<CalendarCellProps> = ({
@@ -27,7 +33,8 @@ const CalendarCell: React.FC<CalendarCellProps> = ({
     leaveRecords,
     onToggleLeave,
     isToday,
-    lunarDate
+    lunarDate,
+    daySchedule
 }) => {
     const formattedDate = format(date, 'yyyy-MM-dd');
 
@@ -90,29 +97,79 @@ const CalendarCell: React.FC<CalendarCellProps> = ({
 
         // 如果是全天請假
         if (record.period === 'fullDay') {
-            // 如果已經有加班人員，不顯示建議
+            // 如果已經有加班人員且已確認，不顯示建議
             if (record.fullDayOvertime?.type === '加整班' && record.fullDayOvertime.fullDayMember?.confirmed) {
                 return [];
             }
-            if (record.fullDayOvertime?.type === '加一半' && 
-                record.fullDayOvertime.firstHalfMember?.confirmed && 
-                record.fullDayOvertime.secondHalfMember?.confirmed) {
-                return [];
-            }
-
-            // 獲取建議班級
-            const bigRestTeam = getBigRestTeam();
-            if (bigRestTeam) {
-                suggestions.add(bigRestTeam);
+            
+            // 加一半的情況，檢查哪個時段仍需要人員
+            if (record.fullDayOvertime?.type === '加一半') {
+                const needsFirstHalf = !record.fullDayOvertime.firstHalfMember?.confirmed;
+                const needsSecondHalf = !record.fullDayOvertime.secondHalfMember?.confirmed;
+                
+                if (!needsFirstHalf && !needsSecondHalf) {
+                    return []; // 兩個時段都已確認，不需要加班
+                }
+                
+                // 獲取可替代的班級
+                // 優先考慮大休班級
+                const bigRestTeam = getBigRestTeam();
+                if (bigRestTeam) {
+                    suggestions.add(bigRestTeam);
+                }
+                
+                // 如果請假人員是上一班的班別，則下一班也可以支援
+                if (leaveTeam) {
+                    // 可能的支援班級（同區域的其他班別）
+                    Object.entries(shifts).forEach(([team, shift]) => {
+                        // 避免與請假人員同班
+                        if (team !== leaveTeam) {
+                            // 可排加班的條件: 大休或小休班級，或者連續班別
+                            if (shift === '大休' || shift === '小休' || 
+                                (leaveShift === '早班' && shift === '中班') || 
+                                (leaveShift === '中班' && shift === '夜班') || 
+                                (leaveShift === '夜班' && shift === '早班')) {
+                                suggestions.add(team);
+                            }
+                        }
+                    });
+                }
+            } else {
+                // 加整班或未設定加班類型的情況
+                // 優先考慮大休班級
+                const bigRestTeam = getBigRestTeam();
+                if (bigRestTeam) {
+                    suggestions.add(bigRestTeam);
+                    return Array.from(suggestions); // 如果有大休班級，只建議大休班級加班
+                }
+                
+                // 其次考慮小休班級
+                Object.entries(shifts).forEach(([team, shift]) => {
+                    if (shift === '小休') {
+                        suggestions.add(team);
+                    }
+                });
+                
+                // 如果沒有大休或小休班級，則所有班級都可以考慮（緊急情況）
+                if (suggestions.size === 0 && leaveTeam) {
+                    Object.entries(shifts).forEach(([team, shift]) => {
+                        if (team !== leaveTeam) {
+                            suggestions.add(team);
+                        }
+                    });
+                }
             }
         } 
         // 如果是自定義時段請假
         else if (typeof record.period === 'object' && record.period.type === 'custom') {
+            // 如果加班人員已確認，不顯示建議
+            if (record.customOvertime?.confirmed) {
+                return [];
+            }
+            
             const startTime = record.period.startTime;
             const endTime = record.period.endTime;
-            const leaveTeam = getMemberTeam(record.name);
-            const leaveShift = leaveTeam ? shifts[leaveTeam as keyof typeof shifts] : null;
-
+            
             // 檢查是否與上一班結束時間重疊
             if (leaveShift === '中班' && startTime === '1615') {
                 const prevTeam = Object.entries(shifts).find(([_, shift]) => shift === '早班')?.[0];
@@ -120,6 +177,10 @@ const CalendarCell: React.FC<CalendarCellProps> = ({
             }
             if (leaveShift === '夜班' && startTime === '2315') {
                 const prevTeam = Object.entries(shifts).find(([_, shift]) => shift === '中班')?.[0];
+                if (prevTeam) suggestions.add(prevTeam);
+            }
+            if (leaveShift === '早班' && startTime === '0815') {
+                const prevTeam = Object.entries(shifts).find(([_, shift]) => shift === '夜班')?.[0];
                 if (prevTeam) suggestions.add(prevTeam);
             }
 
@@ -132,6 +193,16 @@ const CalendarCell: React.FC<CalendarCellProps> = ({
                 const nextTeam = Object.entries(shifts).find(([_, shift]) => shift === '夜班')?.[0];
                 if (nextTeam) suggestions.add(nextTeam);
             }
+            if (leaveShift === '夜班' && endTime === '0815') {
+                const nextTeam = Object.entries(shifts).find(([_, shift]) => shift === '早班')?.[0];
+                if (nextTeam) suggestions.add(nextTeam);
+            }
+            
+            // 如果沒有找到合適的班級，大休班級可以支援
+            if (suggestions.size === 0) {
+                const bigRestTeam = getBigRestTeam();
+                if (bigRestTeam) suggestions.add(bigRestTeam);
+            }
         }
 
         return Array.from(suggestions);
@@ -141,35 +212,59 @@ const CalendarCell: React.FC<CalendarCellProps> = ({
     const shouldShowLeaveRecord = (record: LeaveRecord) => {
         // 請假模式下，所有班級都顯示請假資訊
         if (isLeaveMode) return true;
-        // 其他情境維持原本邏輯
-        if (selectedTeam && shifts[selectedTeam as keyof typeof shifts] === '大休') {
-            const isOvertimeComplete = record.fullDayOvertime?.type === '加整班'
-                ? record.fullDayOvertime.fullDayMember?.confirmed
-                : record.fullDayOvertime?.type === '加一半' &&
-                  record.fullDayOvertime.firstHalfMember?.confirmed &&
-                  record.fullDayOvertime.secondHalfMember?.confirmed;
-            const hasConfirmedCustomOvertime = record.customOvertime?.confirmed;
-            return !isOvertimeComplete && !hasConfirmedCustomOvertime;
-        }
+        
+        // 非大休班級：只有可以支援加班的班級才顯示請假標籤
         if (selectedTeam) {
+            // 檢查請假是否需要加班人員
+            const needsOvertime = checkIfNeedsOvertime(record);
+            if (!needsOvertime) return false;
+            
+            // 檢查是否為建議的加班班級
             const suggestedTeams = getSuggestedOvertimeTeams(record);
             return suggestedTeams.includes(selectedTeam);
         }
+        
+        return false;
+    };
+
+    // 檢查請假記錄是否還需要加班人員
+    const checkIfNeedsOvertime = (record: LeaveRecord) => {
+        // 全天請假的情況
+        if (record.period === 'fullDay') {
+            // 如果沒有設置加班資訊，表示需要加班
+            if (!record.fullDayOvertime) return true;
+            
+            // 加整班的情況，檢查是否有確認的人員
+            if (record.fullDayOvertime.type === '加整班') {
+                return !record.fullDayOvertime.fullDayMember?.confirmed;
+            }
+            
+            // 加一半的情況，檢查兩個時段是否都有確認的人員
+            if (record.fullDayOvertime.type === '加一半') {
+                const firstHalfFilled = record.fullDayOvertime.firstHalfMember?.confirmed;
+                const secondHalfFilled = record.fullDayOvertime.secondHalfMember?.confirmed;
+                return !firstHalfFilled || !secondHalfFilled;
+            }
+        }
+        
+        // 自定義時段請假的情況
+        if (typeof record.period === 'object' && record.period.type === 'custom') {
+            // 如果沒有設置加班資訊或未確認，表示需要加班
+            return !record.customOvertime?.confirmed;
+        }
+        
         return false;
     };
 
     // 判斷是否為建議加班班級
     const isSuggestedOvertime = (record: LeaveRecord) => {
         if (!selectedTeam) return false;
+        
+        // 如果請假不需要加班人員，則不建議加班
+        if (!checkIfNeedsOvertime(record)) return false;
+        
+        // 檢查是否為建議的加班班級
         const suggestedTeams = getSuggestedOvertimeTeams(record);
-        // 若已經有加班人員確認則不顯示標註
-        const isOvertimeComplete = record.fullDayOvertime?.type === '加整班'
-            ? record.fullDayOvertime.fullDayMember?.confirmed
-            : record.fullDayOvertime?.type === '加一半' &&
-              record.fullDayOvertime.firstHalfMember?.confirmed &&
-              record.fullDayOvertime.secondHalfMember?.confirmed;
-        const hasConfirmedCustomOvertime = record.customOvertime?.confirmed;
-        if (isOvertimeComplete || hasConfirmedCustomOvertime) return false;
         return suggestedTeams.includes(selectedTeam);
     };
 
@@ -208,38 +303,38 @@ const CalendarCell: React.FC<CalendarCellProps> = ({
             )}
 
             {/* 顯示請假記錄 */}
-            {isLeaveMode && dayLeaveRecords.length > 0 && (
+            {dayLeaveRecords.length > 0 && (isLeaveMode || selectedTeam) && (
                 <div className="flex flex-col justify-center items-center gap-1 w-full mt-1">
                     {dayLeaveRecords.map((record, idx) => {
                         if (!shouldShowLeaveRecord(record)) {
                             return null;
                         }
-                        const isOvertimeComplete = record.fullDayOvertime?.type === '加整班'
-                            ? record.fullDayOvertime.fullDayMember?.confirmed
-                            : record.fullDayOvertime?.type === '加一半' &&
-                              record.fullDayOvertime.firstHalfMember?.confirmed &&
-                              record.fullDayOvertime.secondHalfMember?.confirmed;
-                        const hasConfirmedCustomOvertime = record.customOvertime?.confirmed;
-                        const isConfirmed = isOvertimeComplete || hasConfirmedCustomOvertime;
-                        const role = getMemberRole(record.name);
+                        
+                        // 計算標籤樣式
                         let tagClass = '';
-                        if (isConfirmed) {
+                        const role = getMemberRole(record.name);
+                        const needsOvertime = checkIfNeedsOvertime(record);
+                        
+                        if (!needsOvertime) {
                             tagClass = 'bg-gray-200 text-gray-500';
                         } else if (role === '班長') {
                             tagClass = 'bg-red-100 text-red-700';
                         } else {
                             tagClass = 'bg-blue-100 text-blue-700';
                         }
+                        
+                        // 根據請假記錄數量調整字體大小
                         const fontSizeClass = dayLeaveRecords.length > 4 
                             ? 'text-[7px]' 
                             : 'text-[9px]';
+                            
                         return (
                             <div
                                 key={idx}
                                 className={`flex items-center gap-1 ${tagClass} ${fontSizeClass} px-1 py-0.5 rounded whitespace-nowrap`}
                             >
                                 {record.name}
-                                {/* 若為建議加班班級，顯示標註 */}
+                                {/* 若為建議加班班級且需要加班，顯示標註 */}
                                 {isSuggestedOvertime(record) && (
                                     <span className="ml-1 px-1 py-0.5 bg-yellow-200 text-yellow-800 rounded text-[8px]">可加班</span>
                                 )}
