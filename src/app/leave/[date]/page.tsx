@@ -1949,8 +1949,31 @@ const LeaveDatePage: React.FC = () => {
                                                     <span className="text-xs ml-1">{record.fullDayOvertime.fullDayMember.team}</span>
                                                 </span>
                                             ) : (
-                                                <span>{overtimePeople || <span className="text-red-500">缺</span>}</span>
-                                            )}
+                                                <span>{overtimePeople || (
+                                                    <>
+                                                        {(() => {
+                                                            const suggestions = getHalfDayOvertimeSuggestions(team, date);
+                                                            let firstTeam = suggestions.firstHalf;
+                                                            let secondTeam = suggestions.secondHalf;
+                                                            
+                                                            if (firstTeam && !firstTeam.endsWith('班')) {
+                                                                firstTeam = firstTeam + '班';
+                                                            }
+                                                            if (secondTeam && !secondTeam.endsWith('班')) {
+                                                                secondTeam = secondTeam + '班';
+                                                            }
+                                                            
+                                                            return (
+                                                                <div className="flex flex-row items-center gap-2">
+                                                                    <span className="text-red-500">前{firstTeam} 缺</span>
+                                                                    <span className="mx-1"></span>
+                                                                    <span className="text-red-500">後{secondTeam} 缺</span>
+                                                                </div>
+                                                            );
+                                                        })()}
+                                                    </>
+                                                  )}</span>
+                                              )}
                                         </div>
                                     ) : (
                                         <div className="relative z-30">
