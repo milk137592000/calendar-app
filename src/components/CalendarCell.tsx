@@ -87,252 +87,39 @@ const CalendarCell: React.FC<CalendarCellProps> = ({
         const suggestions = new Set<string>();
         const leaveTeam = getMemberTeam(record.name);
         const leaveShift = leaveTeam ? shifts[leaveTeam as keyof typeof shifts] : null;
-        
-        // 檢查特定日期 - 如果是 2025-05-08，檢查特定的班級需求
         const isTargetDate = formattedDate === '2025-05-08';
-        
-        console.log(`檢查請假記錄: ${record.name}, 日期: ${formattedDate}, 前半班: ${record.fullDayOvertime?.firstHalfMember?.team}, 後半班: ${record.fullDayOvertime?.secondHalfMember?.team}`);
 
-        // 如果是全天請假
-        if (record.period === 'fullDay') {
-            // 檢查加班狀態
-            if (record.fullDayOvertime?.type === '加整班') {
-                // 如果已確認加班，不顯示建議
-                if (record.fullDayOvertime.fullDayMember?.confirmed) {
-                    return [];
-                }
-                // 獲取大休班級作為建議
+        if (record.period === 'fullDay' && record.fullDayOvertime?.type === '加一半') {
+            // 後半班缺
+            if (!record.fullDayOvertime.secondHalfMember?.confirmed) {
+                // 有 team 就用 team，沒有就推算 A
+                const team = record.fullDayOvertime.secondHalfMember?.team || 'A';
+                suggestions.add(team);
+            }
+            // 前半班缺
+            if (!record.fullDayOvertime.firstHalfMember?.confirmed) {
+                const team = record.fullDayOvertime.firstHalfMember?.team || 'D';
+                suggestions.add(team);
+            }
+        } else if (record.period === 'fullDay' && record.fullDayOvertime?.type === '加整班') {
+            if (!record.fullDayOvertime.fullDayMember?.confirmed) {
                 const bigRestTeam = getBigRestTeam();
-                if (bigRestTeam) {
-                    suggestions.add(bigRestTeam);
-                }
-            } else if (record.fullDayOvertime?.type === '加一半') {
-                // 特殊處理 2025-05-08 - 強制添加 D 班和 A 班
-                if (isTargetDate) {
-                    console.log(`特殊處理目標日期 ${formattedDate}`);
-                    // 如果前半 D 班尚未確認，則添加 D 班
-                    if (!record.fullDayOvertime.firstHalfMember?.confirmed) {
-                        suggestions.add('D');
-                        console.log('添加 D 班作為前半加班建議');
-                    }
-                    // 如果後半 A 班尚未確認，則添加 A 班
-                    if (!record.fullDayOvertime.secondHalfMember?.confirmed) {
-                        suggestions.add('A');
-                        console.log('添加 A 班作為後半加班建議');
-                    }
-                } else {
-                    // 解析前半班資訊
-                    if (!record.fullDayOvertime.firstHalfMember?.confirmed) {
-                        // 如果前半班尚未確認加班，則將該班級添加到建議列表中
-                        if (record.fullDayOvertime.firstHalfMember?.team && record.fullDayOvertime.firstHalfMember.team !== '') {
-                            // 前半班已經被指定班級，但尚未確認
-                            suggestions.add(record.fullDayOvertime.firstHalfMember.team);
-                            console.log(`添加已指定的前半加班班級: ${record.fullDayOvertime.firstHalfMember.team}`);
-                        } else {
-                            // 前半段尚未指定具體班級，使用默認建議邏輯
-                            if (leaveShift === '早班') {
-                                // 早班請假，建議中班加前半
-                                const midShiftTeam = Object.entries(shifts).find(([_, shift]) => shift === '中班')?.[0];
-                                if (midShiftTeam) suggestions.add(midShiftTeam);
-                            } else if (leaveShift === '中班') {
-                                // 中班請假，建議早班加前半
-                                const earlyShiftTeam = Object.entries(shifts).find(([_, shift]) => shift === '早班')?.[0];
-                                if (earlyShiftTeam) suggestions.add(earlyShiftTeam);
-                            } else if (leaveShift === '夜班') {
-                                // 夜班請假，建議中班加前半
-                                const midShiftTeam = Object.entries(shifts).find(([_, shift]) => shift === '中班')?.[0];
-                                if (midShiftTeam) suggestions.add(midShiftTeam);
-                            }
-                        }
-                    }
-                    
-                    // 解析後半班資訊
-                    if (!record.fullDayOvertime.secondHalfMember?.confirmed) {
-                        // 如果後半班尚未確認加班，則將該班級添加到建議列表中
-                        if (record.fullDayOvertime.secondHalfMember?.team && record.fullDayOvertime.secondHalfMember.team !== '') {
-                            // 後半班已經被指定班級，但尚未確認
-                            suggestions.add(record.fullDayOvertime.secondHalfMember.team);
-                            console.log(`添加已指定的後半加班班級: ${record.fullDayOvertime.secondHalfMember.team}`);
-                        } else {
-                            // 後半段尚未指定具體班級，使用默認建議邏輯
-                            if (leaveShift === '早班') {
-                                // 早班請假，建議小休或夜班加後半
-                                const smallRestTeam = Object.entries(shifts).find(([_, shift]) => shift === '小休')?.[0];
-                                const nightShiftTeam = Object.entries(shifts).find(([_, shift]) => shift === '夜班')?.[0];
-                                if (smallRestTeam) suggestions.add(smallRestTeam);
-                                if (nightShiftTeam) suggestions.add(nightShiftTeam);
-                            } else if (leaveShift === '中班') {
-                                // 中班請假，建議小休或夜班加後半
-                                const smallRestTeam = Object.entries(shifts).find(([_, shift]) => shift === '小休')?.[0];
-                                const nightShiftTeam = Object.entries(shifts).find(([_, shift]) => shift === '夜班')?.[0];
-                                if (smallRestTeam) suggestions.add(smallRestTeam);
-                                if (nightShiftTeam) suggestions.add(nightShiftTeam);
-                            } else if (leaveShift === '夜班') {
-                                // 夜班請假，建議早班加後半
-                                const earlyShiftTeam = Object.entries(shifts).find(([_, shift]) => shift === '早班')?.[0];
-                                if (earlyShiftTeam) suggestions.add(earlyShiftTeam);
-                            }
-                        }
-                    }
-                }
-            } else {
-                // 沒有選擇加班類型，但仍需顯示建議
-                const bigRestTeam = getBigRestTeam();
-                if (bigRestTeam) {
-                    suggestions.add(bigRestTeam);
-                }
-                
-                // 特殊處理 2025-05-08 - 強制添加 D 班和 A 班
-                if (isTargetDate) {
-                    suggestions.add('D');
-                    suggestions.add('A');
-                    console.log('添加 D 和 A 班作為加班建議');
-                }
+                if (bigRestTeam) suggestions.add(bigRestTeam);
             }
-        } 
-        // 如果是自定義時段請假
-        else if (typeof record.period === 'object' && record.period.type === 'custom') {
-            // 如果已確認加班，不顯示建議
-            if (record.customOvertime?.confirmed) {
-                return [];
-            }
-            
-            // 如果自定義加班已經指定了班級但尚未確認
-            if (record.customOvertime?.team && record.customOvertime.team !== '') {
-                suggestions.add(record.customOvertime.team);
-                console.log(`添加已指定的自定義加班班級: ${record.customOvertime.team}`);
-                return Array.from(suggestions);
-            }
-            
-            const startTime = record.period.startTime;
-            const endTime = record.period.endTime;
-
-            // 檢查是否與上一班結束時間重疊
-            if (leaveShift === '中班' && startTime === '1615') {
-                const prevTeam = Object.entries(shifts).find(([_, shift]) => shift === '早班')?.[0];
-                if (prevTeam) suggestions.add(prevTeam);
-            }
-            if (leaveShift === '夜班' && startTime === '2315') {
-                const prevTeam = Object.entries(shifts).find(([_, shift]) => shift === '中班')?.[0];
-                if (prevTeam) suggestions.add(prevTeam);
-            }
-
-            // 檢查是否與下一班開始時間重疊
-            if (leaveShift === '早班' && endTime === '1615') {
-                const nextTeam = Object.entries(shifts).find(([_, shift]) => shift === '中班')?.[0];
-                if (nextTeam) suggestions.add(nextTeam);
-            }
-            if (leaveShift === '中班' && endTime === '2315') {
-                const nextTeam = Object.entries(shifts).find(([_, shift]) => shift === '夜班')?.[0];
-                if (nextTeam) suggestions.add(nextTeam);
+        } else if (typeof record.period === 'object' && record.period.type === 'custom') {
+            if (!record.customOvertime?.confirmed) {
+                if (record.customOvertime?.team) suggestions.add(record.customOvertime.team);
             }
         }
-
-        const result = Array.from(suggestions);
-        console.log(`建議加班班級: ${result.join(', ')}`);
-        return result;
+        return Array.from(suggestions);
     };
 
     // 判斷是否應該顯示請假記錄
     const shouldShowLeaveRecord = (record: LeaveRecord) => {
-        // 請假模式下，所有班級都顯示請假資訊
         if (isLeaveMode) return true;
-        
-        // 檢查特定日期 - 如果是 2025-05-08
-        const isTargetDate = formattedDate === '2025-05-08';
-        
-        // B-1 的請假標籤需要顯示在 A 班日曆上
-        // 檢查是否為 B-1 請假記錄（可以通過名字檢查或其他標識）
-        const isB1LeaveRecord = record.name && record.name.includes('B-1');
-        
-        // 如果是目標日期，且是 A 班或 D 班查看
-        if (isTargetDate && selectedTeam) {
-            console.log(`特殊日期處理: ${formattedDate}, 班級: ${selectedTeam}, 請假人: ${record.name}`);
-            
-            // 直接針對 2025/05/08 特殊處理，這一天 A 班應該看到所有請假記錄
-            if (selectedTeam === 'A') {
-                // 檢查是否已完成加班
-                const isFullyComplete = 
-                    (record.fullDayOvertime?.type === '加整班' && record.fullDayOvertime.fullDayMember?.confirmed) ||
-                    (record.fullDayOvertime?.type === '加一半' && 
-                     record.fullDayOvertime.firstHalfMember?.confirmed && 
-                     record.fullDayOvertime.secondHalfMember?.confirmed) ||
-                    record.customOvertime?.confirmed;
-                
-                // 如果加班尚未全部完成，則在 A 班日曆上顯示
-                if (!isFullyComplete) {
-                    console.log(`A班應該顯示 ${record.name} 的請假記錄（未完成加班）`);
-                    return true;
-                }
-            }
-            
-            // D 班特殊處理，類似 A 班
-            if (selectedTeam === 'D') {
-                // 檢查是否已完成前半班加班
-                const isFirstHalfComplete = record.fullDayOvertime?.firstHalfMember?.confirmed || false;
-                
-                // 如果前半班加班尚未完成，則在 D 班日曆上顯示
-                if (!isFirstHalfComplete && record.fullDayOvertime?.type === '加一半') {
-                    console.log(`D班應該顯示 ${record.name} 的請假記錄（前半班未完成加班）`);
-                    return true;
-                }
-            }
-        }
-        
-        // 檢查是否已完成加班
-        const isFirstHalfComplete = record.fullDayOvertime?.firstHalfMember?.confirmed || false;
-        const isSecondHalfComplete = record.fullDayOvertime?.secondHalfMember?.confirmed || false;
-        const isFullDayComplete = record.fullDayOvertime?.type === '加整班' && record.fullDayOvertime.fullDayMember?.confirmed;
-        const isCustomOvertimeComplete = record.customOvertime?.confirmed || false;
-        
-        // 特定班級顯示邏輯：如果前半班或後半班已指定特定班級且該班級與當前選中班級匹配
-        if (selectedTeam) {
-            // 全天加班單 - 加一半
-            if (record.fullDayOvertime?.type === '加一半') {
-                // 檢查前半班
-                if (!isFirstHalfComplete && record.fullDayOvertime.firstHalfMember?.team === selectedTeam) {
-                    console.log(`前半班匹配: ${selectedTeam}`);
-                    return true;
-                }
-                // 檢查後半班
-                if (!isSecondHalfComplete && record.fullDayOvertime.secondHalfMember?.team === selectedTeam) {
-                    console.log(`後半班匹配: ${selectedTeam}`);
-                    return true;
-                }
-            }
-            // 全天加班單 - 加整班（通常是大休班級）
-            else if (record.fullDayOvertime?.type === '加整班' && !isFullDayComplete) {
-                if (shifts[selectedTeam as keyof typeof shifts] === '大休') {
-                    console.log(`大休班級匹配: ${selectedTeam}`);
-                    return true;
-                }
-            }
-            // 自定義時段加班單
-            else if (record.customOvertime && !isCustomOvertimeComplete && record.customOvertime.team === selectedTeam) {
-                console.log(`自定義加班班級匹配: ${selectedTeam}`);
-                return true;
-            }
-        }
-        
-        // 大休班級：顯示所有未完成加班的請假記錄
-        if (selectedTeam && shifts[selectedTeam as keyof typeof shifts] === '大休') {
-            // 檢查是否已經存在確認的加班記錄
-            if (isFullDayComplete || (isFirstHalfComplete && isSecondHalfComplete) || isCustomOvertimeComplete) {
-                return false;
-            }
-            console.log(`大休班級顯示未完成加班: ${selectedTeam}`);
-            return true;
-        }
-        
-        // 其他班級：檢查是否為建議加班班級
-        if (selectedTeam) {
-            const suggestedTeams = getSuggestedOvertimeTeams(record);
-            const result = suggestedTeams.includes(selectedTeam);
-            console.log(`檢查建議加班班級: ${selectedTeam}, 結果: ${result}`);
-            return result;
-        }
-        
-        return false;
+        if (!selectedTeam) return false;
+        const suggestedTeams = getSuggestedOvertimeTeams(record);
+        return suggestedTeams.includes(selectedTeam);
     };
 
     // 判斷是否為建議加班班級
