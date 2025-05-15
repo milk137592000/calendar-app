@@ -82,22 +82,56 @@ const CalendarCell: React.FC<CalendarCellProps> = ({
         return null;
     };
 
+    // Helper: 獲取請假人原始班別
+    const getMemberOriginalShift = (memberName: string) => {
+        const memberTeam = getMemberTeam(memberName); // 假設 getMemberTeam 已正確引入或定義
+        return memberTeam ? shifts[memberTeam as keyof typeof shifts] : null;
+    };
+
     // 獲取建議加班班級
     const getSuggestedOvertimeTeams = (record: LeaveRecord) => {
         const suggestions = new Set<string>();
+        const memberOriginalShift = getMemberOriginalShift(record.name); // 獲取原始班別供推算邏輯使用
+
+        // --- 日誌開始 for getSuggestedOvertimeTeams ---
+        if (record.date === '2025-05-17') { // 限定特定日期，避免過多日誌
+            console.log(`[getSuggestedOvertimeTeams Debug] Record: ${record.name}, Date: ${record.date}, OriginalShift: ${memberOriginalShift}`);
+            if (record.fullDayOvertime?.type === '加一半') {
+                console.log(`  1st Half - Provided Team: ${record.fullDayOvertime.firstHalfMember?.team}, Confirmed: ${record.fullDayOvertime.firstHalfMember?.confirmed}`);
+                console.log(`  2nd Half - Provided Team: ${record.fullDayOvertime.secondHalfMember?.team}, Confirmed: ${record.fullDayOvertime.secondHalfMember?.confirmed}`);
+            }
+        }
+        // --- 日誌結束 for getSuggestedOvertimeTeams ---
 
         if (record.period === 'fullDay' && record.fullDayOvertime) {
             if (record.fullDayOvertime.type === '加一半') {
-                if (record.fullDayOvertime.firstHalfMember?.team && !record.fullDayOvertime.firstHalfMember.confirmed) {
-                    suggestions.add(record.fullDayOvertime.firstHalfMember.team);
+                // First Half
+                if (!record.fullDayOvertime.firstHalfMember?.confirmed) {
+                    if (record.fullDayOvertime.firstHalfMember?.team) { // 優先使用記錄中明確指定的 team
+                        suggestions.add(record.fullDayOvertime.firstHalfMember.team);
+                    } else { // 若記錄中無明確 team，則根據原始班別推算
+                        let derivedTeam1: string | null = null;
+                        if (memberOriginalShift === '早班') derivedTeam1 = 'D';
+                        else if (memberOriginalShift === '夜班') derivedTeam1 = 'C';
+                        if (derivedTeam1) suggestions.add(derivedTeam1);
+                    }
                 }
-                if (record.fullDayOvertime.secondHalfMember?.team && !record.fullDayOvertime.secondHalfMember.confirmed) {
-                    suggestions.add(record.fullDayOvertime.secondHalfMember.team);
+
+                // Second Half
+                if (!record.fullDayOvertime.secondHalfMember?.confirmed) {
+                    if (record.fullDayOvertime.secondHalfMember?.team) { // 優先使用記錄中明確指定的 team
+                        suggestions.add(record.fullDayOvertime.secondHalfMember.team);
+                    } else { // 若記錄中無明確 team，則根據原始班別推算
+                        let derivedTeam2: string | null = null;
+                        if (memberOriginalShift === '早班') derivedTeam2 = 'A';
+                        else if (memberOriginalShift === '夜班') derivedTeam2 = 'D';
+                        if (derivedTeam2) suggestions.add(derivedTeam2);
+                    }
                 }
             } else if (record.fullDayOvertime.type === '加整班') {
                 if (record.fullDayOvertime.fullDayMember?.team && !record.fullDayOvertime.fullDayMember.confirmed) {
                     suggestions.add(record.fullDayOvertime.fullDayMember.team);
-                } else if (!record.fullDayOvertime.fullDayMember?.confirmed) { // Fallback if no specific team but still unconfirmed
+                } else if (!record.fullDayOvertime.fullDayMember?.confirmed) {
                     const bigRestTeam = getBigRestTeam();
                     if (bigRestTeam) suggestions.add(bigRestTeam);
                 }
@@ -107,6 +141,12 @@ const CalendarCell: React.FC<CalendarCellProps> = ({
                 suggestions.add(record.customOvertime.team);
             }
         }
+        
+        // --- 日誌建議結果 ---
+        if (record.date === '2025-05-17') {
+             console.log(`  [getSuggestedOvertimeTeams Debug] Final suggestions for ${record.name}: [${Array.from(suggestions).join(', ')}]`);
+        }
+        // --- 日誌建議結果結束 ---
         return Array.from(suggestions);
     };
 
@@ -114,8 +154,22 @@ const CalendarCell: React.FC<CalendarCellProps> = ({
     const shouldShowLeaveRecord = (record: LeaveRecord) => {
         if (isLeaveMode) return true;
         if (!selectedTeam) return false;
+
         const suggestedTeams = getSuggestedOvertimeTeams(record);
-        return suggestedTeams.includes(selectedTeam);
+        const shouldShow = suggestedTeams.includes(selectedTeam);
+
+        // --- 詳細日誌開始 for shouldShowLeaveRecord ---
+        if (record.date === '2025-05-17') { 
+            const originalShift = getMemberOriginalShift(record.name); // Re-fetch for this log context
+            console.log(`[shouldShowLeaveRecord Debug] Date: ${record.date}, SelectedTeam: ${selectedTeam}`);
+            console.log(`  Record Name: ${record.name}, Original Shift: ${originalShift}`);
+            console.log(`  Processed Suggested Teams: [${suggestedTeams.join(', ')}]`);
+            console.log(`  Should show tag for ${record.name} on ${selectedTeam} calendar? ${shouldShow}`);
+            console.log(`  --------------------`);
+        }
+        // --- 詳細日誌結束 for shouldShowLeaveRecord ---
+
+        return shouldShow;
     };
 
     // 判斷是否為建議加班班級
