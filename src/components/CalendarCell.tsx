@@ -91,84 +91,120 @@ const CalendarCell: React.FC<CalendarCellProps> = ({
     // 獲取建議加班班級
     const getSuggestedOvertimeTeams = (record: LeaveRecord) => {
         const suggestions = new Set<string>();
-        const leaverOriginalTeam = getMemberTeam(record.name); // 獲取請假人原始班級
-        const memberOriginalShift = getMemberOriginalShift(record.name); // 獲取原始班別供推算邏輯使用
+        const leaverOriginalTeam = getMemberTeam(record.name);
+        const memberOriginalShift = getMemberOriginalShift(record.name);
 
-        // --- 日誌開始 for getSuggestedOvertimeTeams ---
-        if (record.date === '2025-05-17' || record.date === '2025-05-20' || record.date === '2025-05-24') { 
-            console.log(`[getSuggestedOvertimeTeams Debug] Record: ${record.name} (Team: ${leaverOriginalTeam}), Date: ${record.date}, OriginalShift: ${memberOriginalShift}`);
-            if (record.fullDayOvertime?.type === '加一半') {
-                console.log(`  1st Half - Provided Team: ${record.fullDayOvertime.firstHalfMember?.team}, Confirmed: ${record.fullDayOvertime.firstHalfMember?.confirmed}`);
-                console.log(`  2nd Half - Provided Team: ${record.fullDayOvertime.secondHalfMember?.team}, Confirmed: ${record.fullDayOvertime.secondHalfMember?.confirmed}`);
-            }
+        const detailedLog = record.date === '2025-05-13' || record.date === '2025-05-17' || record.date === '2025-05-20' || record.date === '2025-05-24';
+
+        if (detailedLog) {
+            console.log(`[getSuggestedOvertimeTeams DETAILED TRACE] Record: ${record.name} (Leaver Original Team: ${leaverOriginalTeam || 'N/A'}), Date: ${record.date}, Leaver Original Shift (on this date): ${memberOriginalShift || 'N/A'}`);
         }
-        // --- 日誌結束 for getSuggestedOvertimeTeams ---
 
-        const addSuggestion = (suggestedTeam: string | null | undefined) => {
+        const addSuggestion = (suggestedTeam: string | null | undefined, half: 'FH' | 'SH' | 'FullDay' | 'Custom') => {
+            if (detailedLog) {
+                console.log(`  [${half}] Attempting to suggest: '${suggestedTeam}'. Leaver's team: '${leaverOriginalTeam}'. Rule: suggestedTeam && suggestedTeam !== leaverOriginalTeam.`);
+            }
             if (suggestedTeam && suggestedTeam !== leaverOriginalTeam) {
                 suggestions.add(suggestedTeam);
+                if (detailedLog) {
+                    console.log(`    [${half}] Added '${suggestedTeam}' to suggestions.`);
+                }
+            } else if (detailedLog) {
+                if (!suggestedTeam) {
+                    console.log(`    [${half}] Did not add: Suggested team is null/undefined.`);
+                } else if (suggestedTeam === leaverOriginalTeam) {
+                    console.log(`    [${half}] Did not add: Suggested team '${suggestedTeam}' is leaver's own team.`);
+                }
             }
         };
 
         if (record.period === 'fullDay' && record.fullDayOvertime) {
             if (record.fullDayOvertime.type === '加一半') {
                 // First Half
-                if (!record.fullDayOvertime.firstHalfMember?.confirmed) {
+                const fhProvidedTeam = record.fullDayOvertime.firstHalfMember?.team;
+                const fhConfirmed = record.fullDayOvertime.firstHalfMember?.confirmed || false;
+                if (detailedLog) {
+                    console.log(`  [FH] Provided Info: .team='${fhProvidedTeam || 'empty'}', .confirmed=${fhConfirmed}`);
+                }
+
+                if (!fhConfirmed) {
                     let teamToSuggest1: string | null = null;
-                    if (record.fullDayOvertime.firstHalfMember?.team) { 
-                        teamToSuggest1 = record.fullDayOvertime.firstHalfMember.team;
-                        if ((record.date === '2025-05-24' && record.name === '毅') || (record.date === '2025-05-17') || (record.date === '2025-05-20')) {
-                            console.log(`  [Debug Suggestion Attempt FH] For ${record.name} on ${record.date}: Using provided .team field: '${teamToSuggest1}'. Leaver's team: '${leaverOriginalTeam}'.`);
-                        }
-                    } else { 
-                        // Fallback to derivation if .team field is empty
+                    if (fhProvidedTeam) {
+                        teamToSuggest1 = fhProvidedTeam;
+                        if (detailedLog) console.log(`  [FH] Using provided .team field: '${teamToSuggest1}'.`);
+                    } else {
                         if (memberOriginalShift === '早班') teamToSuggest1 = 'D';
-                        else if (memberOriginalShift === '中班') teamToSuggest1 = 'A'; 
+                        else if (memberOriginalShift === '中班') teamToSuggest1 = 'A';
                         else if (memberOriginalShift === '夜班') teamToSuggest1 = 'C';
-                        if ((record.date === '2025-05-24' && record.name === '毅') || (record.date === '2025-05-17') || (record.date === '2025-05-20')) {
-                            console.log(`  [Debug Suggestion Attempt FH] For ${record.name} on ${record.date}: .team field empty, DERIVING suggestion: '${teamToSuggest1}'. Leaver's team: '${leaverOriginalTeam}'.`);
-                        }
+                        if (detailedLog) console.log(`  [FH] .team field empty. Derived suggestion based on '${memberOriginalShift}' shift: '${teamToSuggest1}'.`);
                     }
-                    // The existing log for confirmed status can be kept or integrated here, but the critical part is the source of teamToSuggest1
-                    addSuggestion(teamToSuggest1);
+                    addSuggestion(teamToSuggest1, 'FH');
+                } else if (detailedLog) {
+                    console.log(`  [FH] Slot is confirmed. No suggestion needed.`);
                 }
 
                 // Second Half
-                if (!record.fullDayOvertime.secondHalfMember?.confirmed) {
+                const shProvidedTeam = record.fullDayOvertime.secondHalfMember?.team;
+                const shConfirmed = record.fullDayOvertime.secondHalfMember?.confirmed || false;
+                if (detailedLog) {
+                    console.log(`  [SH] Provided Info: .team='${shProvidedTeam || 'empty'}', .confirmed=${shConfirmed}`);
+                }
+
+                if (!shConfirmed) {
                     let teamToSuggest2: string | null = null;
-                    if (record.fullDayOvertime.secondHalfMember?.team) { 
-                        teamToSuggest2 = record.fullDayOvertime.secondHalfMember.team;
-                        if ((record.date === '2025-05-24' && record.name === '毅') || (record.date === '2025-05-17') || (record.date === '2025-05-20')) {
-                            console.log(`  [Debug Suggestion Attempt SH] For ${record.name} on ${record.date}: Using provided .team field: '${teamToSuggest2}'. Leaver's team: '${leaverOriginalTeam}'.`);
-                        }
+                    if (shProvidedTeam) {
+                        teamToSuggest2 = shProvidedTeam;
+                        if (detailedLog) console.log(`  [SH] Using provided .team field: '${teamToSuggest2}'.`);
                     } else {
-                        // Fallback to derivation if .team field is empty
                         if (memberOriginalShift === '早班') teamToSuggest2 = 'A';
-                        else if (memberOriginalShift === '中班') teamToSuggest2 = 'D'; 
+                        else if (memberOriginalShift === '中班') teamToSuggest2 = 'D';
                         else if (memberOriginalShift === '夜班') teamToSuggest2 = 'D';
-                        if ((record.date === '2025-05-24' && record.name === '毅') || (record.date === '2025-05-17') || (record.date === '2025-05-20')) {
-                            console.log(`  [Debug Suggestion Attempt SH] For ${record.name} on ${record.date}: .team field empty, DERIVING suggestion: '${teamToSuggest2}'. Leaver's team: '${leaverOriginalTeam}'.`);
-                        }
+                        if (detailedLog) console.log(`  [SH] .team field empty. Derived suggestion based on '${memberOriginalShift}' shift: '${teamToSuggest2}'.`);
                     }
-                    // The existing log for confirmed status can be kept or integrated here, but the critical part is the source of teamToSuggest2
-                    addSuggestion(teamToSuggest2);
+                    addSuggestion(teamToSuggest2, 'SH');
+                } else if (detailedLog) {
+                    console.log(`  [SH] Slot is confirmed. No suggestion needed.`);
                 }
             } else if (record.fullDayOvertime.type === '加整班') {
-                if (record.fullDayOvertime.fullDayMember?.team && !record.fullDayOvertime.fullDayMember.confirmed) {
-                    addSuggestion(record.fullDayOvertime.fullDayMember.team);
-                } else if (!record.fullDayOvertime.fullDayMember?.confirmed) {
-                    const bigRestTeam = getBigRestTeam();
-                    addSuggestion(bigRestTeam);
+                const fullDayProvidedTeam = record.fullDayOvertime.fullDayMember?.team;
+                const fullDayConfirmed = record.fullDayOvertime.fullDayMember?.confirmed || false;
+                 if (detailedLog) {
+                    console.log(`  [FullDay] Provided Info: .team='${fullDayProvidedTeam || 'empty'}', .confirmed=${fullDayConfirmed}`);
+                }
+                if (!fullDayConfirmed) {
+                    let teamToSuggestFull: string | null = null;
+                    if (fullDayProvidedTeam) {
+                        teamToSuggestFull = fullDayProvidedTeam;
+                         if (detailedLog) console.log(`  [FullDay] Using provided .team field: '${teamToSuggestFull}'.`);
+                    } else {
+                        teamToSuggestFull = getBigRestTeam(); // Fallback to big rest team
+                        if (detailedLog) console.log(`  [FullDay] .team field empty. Derived suggestion (big rest): '${teamToSuggestFull}'.`);
+                    }
+                    addSuggestion(teamToSuggestFull, 'FullDay');
+                } else if (detailedLog) {
+                    console.log(`  [FullDay] Slot is confirmed. No suggestion needed.`);
                 }
             }
         } else if (typeof record.period === 'object' && record.period.type === 'custom' && record.customOvertime) {
-            if (record.customOvertime.team && !record.customOvertime.confirmed) {
-                addSuggestion(record.customOvertime.team);
+            const customProvidedTeam = record.customOvertime.team;
+            const customConfirmed = record.customOvertime.confirmed || false;
+            if (detailedLog) {
+                console.log(`  [Custom] Provided Info: .team='${customProvidedTeam || 'empty'}', .confirmed=${customConfirmed}`);
+            }
+            if (!customConfirmed) {
+                if (customProvidedTeam) { // For custom, we only use provided team currently
+                    addSuggestion(customProvidedTeam, 'Custom');
+                } else if (detailedLog) {
+                    console.log(`  [Custom] .team field empty. No derivation logic for custom overtime suggestions currently.`);
+                }
+            } else if (detailedLog) {
+                console.log(`  [Custom] Slot is confirmed. No suggestion needed.`);
             }
         }
-        
-        if (record.date === '2025-05-17' || record.date === '2025-05-20' || record.date === '2025-05-24') {
-             console.log(`  [getSuggestedOvertimeTeams Debug] Final suggestions for ${record.name}: [${Array.from(suggestions).join(', ')}]`);
+
+        if (detailedLog) {
+             console.log(`  [getSuggestedOvertimeTeams DETAILED TRACE] Final suggestions for ${record.name} on ${record.date}: [${Array.from(suggestions).join(', ')}]`);
+             console.log(`  --------------------`);
         }
         return Array.from(suggestions);
     };
@@ -182,7 +218,7 @@ const CalendarCell: React.FC<CalendarCellProps> = ({
         const shouldShow = suggestedTeams.includes(selectedTeam);
 
         // --- 詳細日誌開始 for shouldShowLeaveRecord ---
-        if (record.date === '2025-05-17' || record.date === '2025-05-20' || record.date === '2025-05-24') { 
+        if (record.date === '2025-05-17' || record.date === '2025-05-20' || record.date === '2025-05-24' || record.date === '2025-05-13') { 
             const originalShift = getMemberOriginalShift(record.name); // Re-fetch for this log context
             console.log(`[shouldShowLeaveRecord Debug] Date: ${record.date}, SelectedTeam: ${selectedTeam}`);
             console.log(`  Record Name: ${record.name}, Original Shift: ${originalShift}`);
