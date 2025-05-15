@@ -91,10 +91,8 @@ export default function Home() {
     ) : [];
 
     const handleToggleLeave = (date: Date) => {
-        if (selectedTeam === '請假') {
-            const dateStr = format(date, 'yyyy-MM-dd');
-            router.push(`/leave/${dateStr}`);
-        }
+        const dateStr = format(date, 'yyyy-MM-dd');
+        router.push(`/leave/${dateStr}`);
     };
 
     // 生成下拉選單選項

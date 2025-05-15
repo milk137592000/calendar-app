@@ -289,7 +289,13 @@ const CalendarCell: React.FC<CalendarCellProps> = ({
                         return (
                             <div
                                 key={idx}
-                                className={`flex items-center gap-1 ${tagClass} ${fontSizeClass} px-1 py-0.5 rounded whitespace-nowrap`}
+                                className={`flex items-center gap-1 ${tagClass} ${fontSizeClass} px-1 py-0.5 rounded whitespace-nowrap cursor-pointer hover:opacity-80`}
+                                onClick={(e) => {
+                                    e.stopPropagation(); // Prevent triggering cell click if the tag itself is clicked
+                                    if (onToggleLeave) {
+                                        onToggleLeave(date);
+                                    }
+                                }}
                             >
                                 {record.name}
                                 {/* 若為建議加班班級，顯示標註 */}
