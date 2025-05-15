@@ -86,10 +86,8 @@ const CalendarCell: React.FC<CalendarCellProps> = ({
     const getSuggestedOvertimeTeams = (record: LeaveRecord) => {
         const suggestions = new Set<string>();
 
-        // Helper to get the original shift of the person on leave
         const getMemberOriginalShift = (memberName: string) => {
             const memberTeam = getMemberTeam(memberName);
-            // 'shifts' prop contains the day's schedule for all teams { A: '夜班', B: '早班', ... }
             return memberTeam ? shifts[memberTeam as keyof typeof shifts] : null;
         };
 
@@ -97,28 +95,26 @@ const CalendarCell: React.FC<CalendarCellProps> = ({
             if (record.fullDayOvertime.type === '加一半') {
                 const memberOriginalShift = getMemberOriginalShift(record.name);
 
-                // First Half
+                // First Half: Strictly use derived suggestion if slot is unconfirmed
                 if (!record.fullDayOvertime.firstHalfMember?.confirmed) {
-                    let suggestedTeam1: string | null = record.fullDayOvertime.firstHalfMember?.team || null;
-                    if (!suggestedTeam1) { // If team not explicitly set, derive suggestion
-                        if (memberOriginalShift === '早班') suggestedTeam1 = 'D';
-                        else if (memberOriginalShift === '夜班') suggestedTeam1 = 'C';
-                        // Add rules for 中班 or other shifts if necessary
-                    }
+                    let suggestedTeam1: string | null = null;
+                    if (memberOriginalShift === '早班') suggestedTeam1 = 'D';
+                    else if (memberOriginalShift === '夜班') suggestedTeam1 = 'C';
+                    // Add rules for 中班 or other shifts if necessary for derived suggestions
                     if (suggestedTeam1) suggestions.add(suggestedTeam1);
                 }
 
-                // Second Half
+                // Second Half: Strictly use derived suggestion if slot is unconfirmed
                 if (!record.fullDayOvertime.secondHalfMember?.confirmed) {
-                    let suggestedTeam2: string | null = record.fullDayOvertime.secondHalfMember?.team || null;
-                    if (!suggestedTeam2) { // If team not explicitly set, derive suggestion
-                        if (memberOriginalShift === '早班') suggestedTeam2 = 'A';
-                        else if (memberOriginalShift === '夜班') suggestedTeam2 = 'D';
-                        // Add rules for 中班 or other shifts if necessary
-                    }
+                    let suggestedTeam2: string | null = null;
+                    if (memberOriginalShift === '早班') suggestedTeam2 = 'A';
+                    else if (memberOriginalShift === '夜班') suggestedTeam2 = 'D';
+                    // Add rules for 中班 or other shifts if necessary for derived suggestions
                     if (suggestedTeam2) suggestions.add(suggestedTeam2);
                 }
             } else if (record.fullDayOvertime.type === '加整班') {
+                // For '加整班', if a specific team is assigned and unconfirmed, use that.
+                // Otherwise, if unconfirmed, fall back to bigRestTeam.
                 if (record.fullDayOvertime.fullDayMember?.team && !record.fullDayOvertime.fullDayMember.confirmed) {
                     suggestions.add(record.fullDayOvertime.fullDayMember.team);
                 } else if (!record.fullDayOvertime.fullDayMember?.confirmed) {
@@ -127,6 +123,7 @@ const CalendarCell: React.FC<CalendarCellProps> = ({
                 }
             }
         } else if (typeof record.period === 'object' && record.period.type === 'custom' && record.customOvertime) {
+            // For custom overtime, if a specific team is assigned and unconfirmed, use that.
             if (record.customOvertime.team && !record.customOvertime.confirmed) {
                 suggestions.add(record.customOvertime.team);
             }
