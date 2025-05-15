@@ -85,25 +85,31 @@ const CalendarCell: React.FC<CalendarCellProps> = ({
     // 獲取建議加班班級
     const getSuggestedOvertimeTeams = (record: LeaveRecord) => {
         const suggestions = new Set<string>();
-        if (record.period === 'fullDay' && record.fullDayOvertime?.type === '加一半') {
-            // 前半班缺
-            if (!record.fullDayOvertime.firstHalfMember?.confirmed) {
-                const team = record.fullDayOvertime.firstHalfMember?.team || 'A';
-                suggestions.add(team);
+
+        if (record.period === 'fullDay' && record.fullDayOvertime) {
+            if (record.fullDayOvertime.type === '加一半') {
+                if (record.fullDayOvertime.firstHalfMember?.team && !record.fullDayOvertime.firstHalfMember.confirmed) {
+                    suggestions.add(record.fullDayOvertime.firstHalfMember.team);
+                }
+                if (record.fullDayOvertime.secondHalfMember?.team && !record.fullDayOvertime.secondHalfMember.confirmed) {
+                    suggestions.add(record.fullDayOvertime.secondHalfMember.team);
+                }
+            } else if (record.fullDayOvertime.type === '加整班') {
+                // Prioritize specific team assigned to the full day overtime slot
+                if (record.fullDayOvertime.fullDayMember?.team && !record.fullDayOvertime.fullDayMember.confirmed) {
+                    suggestions.add(record.fullDayOvertime.fullDayMember.team);
+                } 
+                // Fallback: If no specific team is assigned but slot is unconfirmed, suggest the big rest team
+                else if (!record.fullDayOvertime.fullDayMember?.confirmed) { 
+                    const bigRestTeam = getBigRestTeam();
+                    if (bigRestTeam) {
+                        suggestions.add(bigRestTeam);
+                    }
+                }
             }
-            // 後半班缺
-            if (!record.fullDayOvertime.secondHalfMember?.confirmed) {
-                const team = record.fullDayOvertime.secondHalfMember?.team || 'A';
-                suggestions.add(team);
-            }
-        } else if (record.period === 'fullDay' && record.fullDayOvertime?.type === '加整班') {
-            if (!record.fullDayOvertime.fullDayMember?.confirmed) {
-                const bigRestTeam = getBigRestTeam();
-                if (bigRestTeam) suggestions.add(bigRestTeam);
-            }
-        } else if (typeof record.period === 'object' && record.period.type === 'custom') {
-            if (!record.customOvertime?.confirmed) {
-                if (record.customOvertime?.team) suggestions.add(record.customOvertime.team);
+        } else if (typeof record.period === 'object' && record.period.type === 'custom' && record.customOvertime) {
+            if (record.customOvertime.team && !record.customOvertime.confirmed) {
+                suggestions.add(record.customOvertime.team);
             }
         }
         return Array.from(suggestions);
@@ -113,8 +119,8 @@ const CalendarCell: React.FC<CalendarCellProps> = ({
     const shouldShowLeaveRecord = (record: LeaveRecord) => {
         if (isLeaveMode) return true;
         if (!selectedTeam) return false;
-        const suggestedTeams = getSuggestedOvertimeTeams(record);
-        return suggestedTeams.includes(selectedTeam);
+            const suggestedTeams = getSuggestedOvertimeTeams(record);
+            return suggestedTeams.includes(selectedTeam);
     };
 
     // 判斷是否為建議加班班級
