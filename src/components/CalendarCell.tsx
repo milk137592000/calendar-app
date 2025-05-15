@@ -95,7 +95,7 @@ const CalendarCell: React.FC<CalendarCellProps> = ({
         const memberOriginalShift = getMemberOriginalShift(record.name); // 獲取原始班別供推算邏輯使用
 
         // --- 日誌開始 for getSuggestedOvertimeTeams ---
-        if (record.date === '2025-05-17' || record.date === '2025-05-20') { 
+        if (record.date === '2025-05-17' || record.date === '2025-05-20' || record.date === '2025-05-24') { 
             console.log(`[getSuggestedOvertimeTeams Debug] Record: ${record.name} (Team: ${leaverOriginalTeam}), Date: ${record.date}, OriginalShift: ${memberOriginalShift}`);
             if (record.fullDayOvertime?.type === '加一半') {
                 console.log(`  1st Half - Provided Team: ${record.fullDayOvertime.firstHalfMember?.team}, Confirmed: ${record.fullDayOvertime.firstHalfMember?.confirmed}`);
@@ -114,28 +114,34 @@ const CalendarCell: React.FC<CalendarCellProps> = ({
             if (record.fullDayOvertime.type === '加一半') {
                 // First Half
                 if (!record.fullDayOvertime.firstHalfMember?.confirmed) {
+                    let teamToSuggest1: string | null = null;
                     if (record.fullDayOvertime.firstHalfMember?.team) { 
-                        addSuggestion(record.fullDayOvertime.firstHalfMember.team);
+                        teamToSuggest1 = record.fullDayOvertime.firstHalfMember.team;
                     } else { 
-                        let derivedTeam1: string | null = null;
-                        if (memberOriginalShift === '早班') derivedTeam1 = 'D';
-                        else if (memberOriginalShift === '中班') derivedTeam1 = 'A'; // 中班前半建議A
-                        else if (memberOriginalShift === '夜班') derivedTeam1 = 'C';
-                        addSuggestion(derivedTeam1);
+                        if (memberOriginalShift === '早班') teamToSuggest1 = 'D';
+                        else if (memberOriginalShift === '中班') teamToSuggest1 = 'A'; 
+                        else if (memberOriginalShift === '夜班') teamToSuggest1 = 'C';
                     }
+                    if ((record.date === '2025-05-24' && record.name === '毅') || (record.date === '2025-05-17') || (record.date === '2025-05-20')) {
+                        console.log(`  [Debug Suggestion Attempt FH] For ${record.name} on ${record.date}: Trying to suggest '${teamToSuggest1}'. Leaver's team: '${leaverOriginalTeam}'. Slot confirmed: ${record.fullDayOvertime.firstHalfMember?.confirmed}.`);
+                    }
+                    addSuggestion(teamToSuggest1);
                 }
 
                 // Second Half
                 if (!record.fullDayOvertime.secondHalfMember?.confirmed) {
+                    let teamToSuggest2: string | null = null;
                     if (record.fullDayOvertime.secondHalfMember?.team) { 
-                        addSuggestion(record.fullDayOvertime.secondHalfMember.team);
+                        teamToSuggest2 = record.fullDayOvertime.secondHalfMember.team;
                     } else { 
-                        let derivedTeam2: string | null = null;
-                        if (memberOriginalShift === '早班') derivedTeam2 = 'A';
-                        else if (memberOriginalShift === '中班') derivedTeam2 = 'D'; // 中班後半建議D
-                        else if (memberOriginalShift === '夜班') derivedTeam2 = 'D';
-                        addSuggestion(derivedTeam2);
+                        if (memberOriginalShift === '早班') teamToSuggest2 = 'A';
+                        else if (memberOriginalShift === '中班') teamToSuggest2 = 'D'; 
+                        else if (memberOriginalShift === '夜班') teamToSuggest2 = 'D';
                     }
+                    if ((record.date === '2025-05-24' && record.name === '毅') || (record.date === '2025-05-17') || (record.date === '2025-05-20')) {
+                        console.log(`  [Debug Suggestion Attempt SH] For ${record.name} on ${record.date}: Trying to suggest '${teamToSuggest2}'. Leaver's team: '${leaverOriginalTeam}'. Slot confirmed: ${record.fullDayOvertime.secondHalfMember?.confirmed}.`);
+                    }
+                    addSuggestion(teamToSuggest2);
                 }
             } else if (record.fullDayOvertime.type === '加整班') {
                 if (record.fullDayOvertime.fullDayMember?.team && !record.fullDayOvertime.fullDayMember.confirmed) {
@@ -151,7 +157,7 @@ const CalendarCell: React.FC<CalendarCellProps> = ({
             }
         }
         
-        if (record.date === '2025-05-17' || record.date === '2025-05-20') {
+        if (record.date === '2025-05-17' || record.date === '2025-05-20' || record.date === '2025-05-24') {
              console.log(`  [getSuggestedOvertimeTeams Debug] Final suggestions for ${record.name}: [${Array.from(suggestions).join(', ')}]`);
         }
         return Array.from(suggestions);
@@ -166,7 +172,7 @@ const CalendarCell: React.FC<CalendarCellProps> = ({
         const shouldShow = suggestedTeams.includes(selectedTeam);
 
         // --- 詳細日誌開始 for shouldShowLeaveRecord ---
-        if (record.date === '2025-05-17' || record.date === '2025-05-20') { 
+        if (record.date === '2025-05-17' || record.date === '2025-05-20' || record.date === '2025-05-24') { 
             const originalShift = getMemberOriginalShift(record.name); // Re-fetch for this log context
             console.log(`[shouldShowLeaveRecord Debug] Date: ${record.date}, SelectedTeam: ${selectedTeam}`);
             console.log(`  Record Name: ${record.name}, Original Shift: ${originalShift}`);
