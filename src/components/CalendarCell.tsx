@@ -256,7 +256,7 @@ const CalendarCell: React.FC<CalendarCellProps> = ({
             )}
 
             {/* 顯示請假記錄 */}
-            {isLeaveMode && dayLeaveRecords.length > 0 && (
+            {dayLeaveRecords.length > 0 && (
                 <div className="flex flex-col justify-center items-center gap-1 w-full mt-1">
                     {dayLeaveRecords.map((record, idx) => {
                         if (!shouldShowLeaveRecord(record)) {
