@@ -117,10 +117,19 @@ const CalendarCell: React.FC<CalendarCellProps> = ({
                     let teamToSuggest1: string | null = null;
                     if (record.fullDayOvertime.firstHalfMember?.team) { 
                         teamToSuggest1 = record.fullDayOvertime.firstHalfMember.team;
+                        if ((record.date === '2025-05-24' && record.name === '毅') || (record.date === '2025-05-17') || (record.date === '2025-05-20')) {
+                            console.log(`  [Debug Suggestion Attempt FH] For ${record.name} on ${record.date}: Using provided .team field: '${teamToSuggest1}'. Leaver's team: '${leaverOriginalTeam}'.`);
+                        }
+                    } else { 
+                        // Fallback to derivation if .team field is empty
+                        if (memberOriginalShift === '早班') teamToSuggest1 = 'D';
+                        else if (memberOriginalShift === '中班') teamToSuggest1 = 'A'; 
+                        else if (memberOriginalShift === '夜班') teamToSuggest1 = 'C';
+                        if ((record.date === '2025-05-24' && record.name === '毅') || (record.date === '2025-05-17') || (record.date === '2025-05-20')) {
+                            console.log(`  [Debug Suggestion Attempt FH] For ${record.name} on ${record.date}: .team field empty, DERIVING suggestion: '${teamToSuggest1}'. Leaver's team: '${leaverOriginalTeam}'.`);
+                        }
                     }
-                    if ((record.date === '2025-05-24' && record.name === '毅') || (record.date === '2025-05-17') || (record.date === '2025-05-20')) {
-                        console.log(`  [Debug Suggestion Attempt FH] For ${record.name} on ${record.date}: Trying to suggest '${teamToSuggest1}' (from .team field). Leaver's team: '${leaverOriginalTeam}'. Slot confirmed: ${record.fullDayOvertime.firstHalfMember?.confirmed}.`);
-                    }
+                    // The existing log for confirmed status can be kept or integrated here, but the critical part is the source of teamToSuggest1
                     addSuggestion(teamToSuggest1);
                 }
 
@@ -129,10 +138,19 @@ const CalendarCell: React.FC<CalendarCellProps> = ({
                     let teamToSuggest2: string | null = null;
                     if (record.fullDayOvertime.secondHalfMember?.team) { 
                         teamToSuggest2 = record.fullDayOvertime.secondHalfMember.team;
+                        if ((record.date === '2025-05-24' && record.name === '毅') || (record.date === '2025-05-17') || (record.date === '2025-05-20')) {
+                            console.log(`  [Debug Suggestion Attempt SH] For ${record.name} on ${record.date}: Using provided .team field: '${teamToSuggest2}'. Leaver's team: '${leaverOriginalTeam}'.`);
+                        }
+                    } else {
+                        // Fallback to derivation if .team field is empty
+                        if (memberOriginalShift === '早班') teamToSuggest2 = 'A';
+                        else if (memberOriginalShift === '中班') teamToSuggest2 = 'D'; 
+                        else if (memberOriginalShift === '夜班') teamToSuggest2 = 'D';
+                        if ((record.date === '2025-05-24' && record.name === '毅') || (record.date === '2025-05-17') || (record.date === '2025-05-20')) {
+                            console.log(`  [Debug Suggestion Attempt SH] For ${record.name} on ${record.date}: .team field empty, DERIVING suggestion: '${teamToSuggest2}'. Leaver's team: '${leaverOriginalTeam}'.`);
+                        }
                     }
-                    if ((record.date === '2025-05-24' && record.name === '毅') || (record.date === '2025-05-17') || (record.date === '2025-05-20')) {
-                        console.log(`  [Debug Suggestion Attempt SH] For ${record.name} on ${record.date}: Trying to suggest '${teamToSuggest2}' (from .team field). Leaver's team: '${leaverOriginalTeam}'. Slot confirmed: ${record.fullDayOvertime.secondHalfMember?.confirmed}.`);
-                    }
+                    // The existing log for confirmed status can be kept or integrated here, but the critical part is the source of teamToSuggest2
                     addSuggestion(teamToSuggest2);
                 }
             } else if (record.fullDayOvertime.type === '加整班') {
