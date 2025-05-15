@@ -117,13 +117,9 @@ const CalendarCell: React.FC<CalendarCellProps> = ({
                     let teamToSuggest1: string | null = null;
                     if (record.fullDayOvertime.firstHalfMember?.team) { 
                         teamToSuggest1 = record.fullDayOvertime.firstHalfMember.team;
-                    } else { 
-                        if (memberOriginalShift === '早班') teamToSuggest1 = 'D';
-                        else if (memberOriginalShift === '中班') teamToSuggest1 = 'A'; 
-                        else if (memberOriginalShift === '夜班') teamToSuggest1 = 'C';
                     }
                     if ((record.date === '2025-05-24' && record.name === '毅') || (record.date === '2025-05-17') || (record.date === '2025-05-20')) {
-                        console.log(`  [Debug Suggestion Attempt FH] For ${record.name} on ${record.date}: Trying to suggest '${teamToSuggest1}'. Leaver's team: '${leaverOriginalTeam}'. Slot confirmed: ${record.fullDayOvertime.firstHalfMember?.confirmed}.`);
+                        console.log(`  [Debug Suggestion Attempt FH] For ${record.name} on ${record.date}: Trying to suggest '${teamToSuggest1}' (from .team field). Leaver's team: '${leaverOriginalTeam}'. Slot confirmed: ${record.fullDayOvertime.firstHalfMember?.confirmed}.`);
                     }
                     addSuggestion(teamToSuggest1);
                 }
@@ -133,13 +129,9 @@ const CalendarCell: React.FC<CalendarCellProps> = ({
                     let teamToSuggest2: string | null = null;
                     if (record.fullDayOvertime.secondHalfMember?.team) { 
                         teamToSuggest2 = record.fullDayOvertime.secondHalfMember.team;
-                    } else { 
-                        if (memberOriginalShift === '早班') teamToSuggest2 = 'A';
-                        else if (memberOriginalShift === '中班') teamToSuggest2 = 'D'; 
-                        else if (memberOriginalShift === '夜班') teamToSuggest2 = 'D';
                     }
                     if ((record.date === '2025-05-24' && record.name === '毅') || (record.date === '2025-05-17') || (record.date === '2025-05-20')) {
-                        console.log(`  [Debug Suggestion Attempt SH] For ${record.name} on ${record.date}: Trying to suggest '${teamToSuggest2}'. Leaver's team: '${leaverOriginalTeam}'. Slot confirmed: ${record.fullDayOvertime.secondHalfMember?.confirmed}.`);
+                        console.log(`  [Debug Suggestion Attempt SH] For ${record.name} on ${record.date}: Trying to suggest '${teamToSuggest2}' (from .team field). Leaver's team: '${leaverOriginalTeam}'. Slot confirmed: ${record.fullDayOvertime.secondHalfMember?.confirmed}.`);
                     }
                     addSuggestion(teamToSuggest2);
                 }
