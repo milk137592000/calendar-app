@@ -56,19 +56,14 @@ const generateSchedules = (year: number, month: number): DaySchedule[] => {
 
 export default function Home() {
     const router = useRouter();
-    const [currentDate, setCurrentDate] = useState<Date | null>(null);
+    const [currentDate, setCurrentDate] = useState<Date>(() => {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        return today;
+    });
     const [selectedTeam, setSelectedTeam] = useState<string>('請假'); // 預設顯示請假日曆
     const [leaveRecords, setLeaveRecords] = useState<LeaveRecord[]>([]);
     const [userName, setUserName] = useState<string>('');
-
-    // 僅在 client 端初始化 currentDate
-    React.useEffect(() => {
-        if (!currentDate) {
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-            setCurrentDate(today);
-        }
-    }, [currentDate]);
 
     // 從 API 獲取請假記錄
     const fetchLeaveRecords = async () => {
@@ -87,7 +82,7 @@ export default function Home() {
 
     // 在組件掛載時和日期變更時獲取請假記錄
     React.useEffect(() => {
-        if (currentDate) fetchLeaveRecords();
+        fetchLeaveRecords();
     }, [currentDate]);
 
     const schedules = currentDate ? generateSchedules(
