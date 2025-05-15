@@ -135,8 +135,27 @@ const CalendarCell: React.FC<CalendarCellProps> = ({
     const shouldShowLeaveRecord = (record: LeaveRecord) => {
         if (isLeaveMode) return true;
         if (!selectedTeam) return false;
-            const suggestedTeams = getSuggestedOvertimeTeams(record);
-            return suggestedTeams.includes(selectedTeam);
+
+        const originalShift = getMemberOriginalShift(record.name);
+        const suggestedTeams = getSuggestedOvertimeTeams(record);
+        const shouldShow = suggestedTeams.includes(selectedTeam);
+
+        // --- 詳細日誌開始 ---
+        if (record.date === '2025-05-17') { // 只針對特定日期和記錄進行日誌輸出，避免過多信息
+            console.log(`[CalendarCell Debug] Date: ${record.date}, SelectedTeam: ${selectedTeam}`);
+            console.log(`  Record Name: ${record.name}, Original Shift: ${originalShift}`);
+            console.log(`  Overtime Type: ${record.fullDayOvertime?.type}`);
+            if (record.fullDayOvertime?.type === '加一半') {
+                console.log(`    1st Half Confirmed: ${record.fullDayOvertime.firstHalfMember?.confirmed}, TeamField: ${record.fullDayOvertime.firstHalfMember?.team}`);
+                console.log(`    2nd Half Confirmed: ${record.fullDayOvertime.secondHalfMember?.confirmed}, TeamField: ${record.fullDayOvertime.secondHalfMember?.team}`);
+            }
+            console.log(`  Suggested Teams by getSuggestedOvertimeTeams: [${suggestedTeams.join(', ')}]`);
+            console.log(`  Should show tag for ${record.name} on ${selectedTeam} calendar? ${shouldShow}`);
+            console.log(`  --------------------`);
+        }
+        // --- 詳細日誌結束 ---
+
+        return shouldShow;
     };
 
     // 判斷是否為建議加班班級
@@ -216,6 +235,12 @@ const CalendarCell: React.FC<CalendarCellProps> = ({
         const result = suggestedTeams.includes(selectedTeam);
         console.log(`建議加班標籤檢查: ${selectedTeam}, 結果: ${result}`);
         return result;
+    };
+
+    // Helper: 獲取請假人原始班別 (移至與 shouldShowLeaveRecord 和 getSuggestedOvertimeTeams 同級)
+    const getMemberOriginalShift = (memberName: string) => {
+        const memberTeam = getMemberTeam(memberName); // 假設 getMemberTeam 已正確引入或定義
+        return memberTeam ? shifts[memberTeam as keyof typeof shifts] : null;
     };
 
     return (
