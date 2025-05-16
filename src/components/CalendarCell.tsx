@@ -312,7 +312,7 @@ const CalendarCell: React.FC<CalendarCellProps> = ({
         if (isLeaveMode) return true;
         if (!selectedTeam) return false;
 
-        // 只要加班單有指定本班且未確認（即"X班 缺"），X班日曆就顯示該請假標籤
+        // 1. 指定本班且未確認
         if (record.period === 'fullDay' && record.fullDayOvertime) {
             if (record.fullDayOvertime.type === '加整班' &&
                 record.fullDayOvertime.fullDayMember?.team === selectedTeam &&
@@ -334,6 +334,26 @@ const CalendarCell: React.FC<CalendarCellProps> = ({
             record.customOvertime?.team === selectedTeam &&
             !record.customOvertime?.confirmed) {
             return true;
+        }
+
+        // 2. 未指定班級但根據規則建議本班且未確認
+        // 只要 getSuggestedOvertimeTeams(record) 包含 selectedTeam
+        const suggestedTeams = getSuggestedOvertimeTeams(record);
+        if (suggestedTeams.includes(selectedTeam)) {
+            // 但要確保該時段未被確認
+            if (record.period === 'fullDay' && record.fullDayOvertime) {
+                if (record.fullDayOvertime.type === '加整班' && !record.fullDayOvertime.fullDayMember?.confirmed) {
+                    return true;
+                }
+                if (record.fullDayOvertime.type === '加一半') {
+                    if (!record.fullDayOvertime.firstHalfMember?.confirmed || !record.fullDayOvertime.secondHalfMember?.confirmed) {
+                        return true;
+                    }
+                }
+            }
+            if (typeof record.period === 'object' && record.period.type === 'custom' && !record.customOvertime?.confirmed) {
+                return true;
+            }
         }
         return false;
     };
