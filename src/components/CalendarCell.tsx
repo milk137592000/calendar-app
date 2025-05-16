@@ -256,9 +256,9 @@ const CalendarCell: React.FC<CalendarCellProps> = ({
                         isRelevant = true;
                     } else if (!overtime.firstHalfMember?.team && leaverShiftToday) {
                         let suggestedFH = null;
-                        if (leaverShiftToday === '早班') suggestedFH = 'D';
-                        else if (leaverShiftToday === '中班') suggestedFH = 'A';
-                        else if (leaverShiftToday === '夜班') suggestedFH = 'C';
+                        if (leaverShiftToday === '早班') suggestedFH = findTeamByShiftType('中班');
+                        else if (leaverShiftToday === '中班') suggestedFH = findTeamByShiftType('早班');
+                        else if (leaverShiftToday === '夜班') suggestedFH = findTeamByShiftType('早班');
                         if (suggestedFH === currentSelectedTeam) isRelevant = true;
                     }
                     if (isRelevant) return ` (前半缺)`;
@@ -271,9 +271,15 @@ const CalendarCell: React.FC<CalendarCellProps> = ({
                         isRelevant = true;
                     } else if (!overtime.secondHalfMember?.team && leaverShiftToday) {
                         let suggestedSH = null;
-                        if (leaverShiftToday === '早班') suggestedSH = 'A';
-                        else if (leaverShiftToday === '中班') suggestedSH = 'D';
-                        else if (leaverShiftToday === '夜班') suggestedSH = 'D';
+                        if (leaverShiftToday === '早班') {
+                            suggestedSH = findTeamByShiftType('小休');
+                            if (!suggestedSH) suggestedSH = findTeamByShiftType('夜班');
+                        } else if (leaverShiftToday === '中班') {
+                            suggestedSH = findTeamByShiftType('小休');
+                            if (!suggestedSH) suggestedSH = findTeamByShiftType('夜班');
+                        } else if (leaverShiftToday === '夜班') {
+                            suggestedSH = findTeamByShiftType('中班');
+                        }
                         if (suggestedSH === currentSelectedTeam) isRelevant = true;
                     }
                     // Important: Ensure this deficit applies if the first half didn't return a label for this team.
