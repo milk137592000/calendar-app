@@ -1713,7 +1713,7 @@ const LeaveDatePage: React.FC = () => {
         const memberRole = team ? getMemberRole(record.name) : undefined;
         const teamShift = team ? getTeamShift(team, date) : null;
         // 移除加班卡簡易模式，不再顯示加班資訊
-        
+
         return (
             <div className="space-y-2">
                 <p className="text-gray-700"><span className="font-medium">請假人員：</span>{record.name} ({memberRole || '未知'})</p>
@@ -1932,7 +1932,7 @@ const LeaveDatePage: React.FC = () => {
                                                         })()}
                                                     </>
                                                   )}</span>
-                                              )}
+                                            )}
                                         </div>
                                     ) : (
                                         <div className="relative z-30">

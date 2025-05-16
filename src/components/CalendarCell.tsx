@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { format, isSameDay } from 'date-fns';
+import { format, isSameDay, parse } from 'date-fns';
 import { zhTW } from 'date-fns/locale';
 import { TEAMS } from '@/data/teams';
 import { getShiftForDate, calculateTeamDeficit, getMemberRole, getMemberTeam } from '@/utils/schedule';
@@ -168,14 +168,14 @@ const CalendarCell: React.FC<CalendarCellProps> = ({
             } else if (record.fullDayOvertime.type === '加整班') {
                 const fullDayProvidedTeam = record.fullDayOvertime.fullDayMember?.team;
                 const fullDayConfirmed = record.fullDayOvertime.fullDayMember?.confirmed || false;
-                 if (detailedLog) {
+                if (detailedLog) {
                     console.log(`  [FullDay] Provided Info: .team='${fullDayProvidedTeam || 'empty'}', .confirmed=${fullDayConfirmed}`);
                 }
                 if (!fullDayConfirmed) {
                     let teamToSuggestFull: string | null = null;
                     if (fullDayProvidedTeam) {
                         teamToSuggestFull = fullDayProvidedTeam;
-                         if (detailedLog) console.log(`  [FullDay] Using provided .team field: '${teamToSuggestFull}'.`);
+                        if (detailedLog) console.log(`  [FullDay] Using provided .team field: '${teamToSuggestFull}'.`);
                     } else {
                         teamToSuggestFull = getBigRestTeam(); // Fallback to big rest team
                         if (detailedLog) console.log(`  [FullDay] .team field empty. Derived suggestion (big rest): '${teamToSuggestFull}'.`);
@@ -203,10 +203,85 @@ const CalendarCell: React.FC<CalendarCellProps> = ({
         }
 
         if (detailedLog) {
-             console.log(`  [getSuggestedOvertimeTeams DETAILED TRACE] Final suggestions for ${record.name} on ${record.date}: [${Array.from(suggestions).join(', ')}]`);
-             console.log(`  --------------------`);
+            console.log(`  [getSuggestedOvertimeTeams DETAILED TRACE] Final suggestions for ${record.name} on ${record.date}: [${Array.from(suggestions).join(', ')}]`);
+            console.log(`  --------------------`);
         }
         return Array.from(suggestions);
+    };
+
+    // Helper function to get deficit label for the current team
+    const getDeficitLabelForTeam = (
+        record: LeaveRecord,
+        currentSelectedTeam: string | undefined,
+        // allShiftsOnDate: DaySchedule['shifts'], // Already available as 'shifts' prop
+        getLeaverOriginalShift: (memberName: string) => string | null,
+        getBigRestTeamOnDate: () => string | null
+    ): string => {
+        if (!currentSelectedTeam) return "";
+
+        const leaverName = record.name;
+        const leaverOriginalTeam = getMemberTeam(leaverName);
+
+        if (currentSelectedTeam === leaverOriginalTeam) return ""; // Don't show for leaver's own team calendar
+
+        const overtime = record.fullDayOvertime;
+        const customO = record.customOvertime;
+
+        if (record.period === 'fullDay' && overtime) {
+            const leaverShiftToday = getLeaverOriginalShift(leaverName);
+
+            if (overtime.type === '加一半') {
+                // First Half
+                if (!overtime.firstHalfMember?.confirmed) {
+                    let isRelevant = false;
+                    if (overtime.firstHalfMember?.team === currentSelectedTeam) {
+                        isRelevant = true;
+                    } else if (!overtime.firstHalfMember?.team && leaverShiftToday) {
+                        let suggestedFH = null;
+                        if (leaverShiftToday === '早班') suggestedFH = 'D';
+                        else if (leaverShiftToday === '中班') suggestedFH = 'A';
+                        else if (leaverShiftToday === '夜班') suggestedFH = 'C';
+                        if (suggestedFH === currentSelectedTeam) isRelevant = true;
+                    }
+                    if (isRelevant) return ` (前半缺)`;
+                }
+
+                // Second Half (only if first half was not relevant or was filled)
+                if (!overtime.secondHalfMember?.confirmed) {
+                    let isRelevant = false;
+                    if (overtime.secondHalfMember?.team === currentSelectedTeam) {
+                        isRelevant = true;
+                    } else if (!overtime.secondHalfMember?.team && leaverShiftToday) {
+                        let suggestedSH = null;
+                        if (leaverShiftToday === '早班') suggestedSH = 'A';
+                        else if (leaverShiftToday === '中班') suggestedSH = 'D';
+                        else if (leaverShiftToday === '夜班') suggestedSH = 'D';
+                        if (suggestedSH === currentSelectedTeam) isRelevant = true;
+                    }
+                    // Important: Ensure this deficit applies if the first half wasn't already flagged for this team
+                    // This logic branch is only reached if the first half didn't return a label for this team.
+                    if (isRelevant) return ` (後半缺)`;
+                }
+            } else if (overtime.type === '加整班') {
+                if (!overtime.fullDayMember?.confirmed) {
+                    let isRelevant = false;
+                    if (overtime.fullDayMember?.team === currentSelectedTeam) {
+                        isRelevant = true;
+                    } else if (!overtime.fullDayMember?.team) {
+                        const bigRestTeam = getBigRestTeamOnDate();
+                        if (bigRestTeam === currentSelectedTeam) isRelevant = true;
+                    }
+                    if (isRelevant) return ` (全日缺)`;
+                }
+            }
+        }
+        // Custom overtime
+        else if (typeof record.period === 'object' && record.period.type === 'custom' && customO) {
+            if (!customO.confirmed && customO.team === currentSelectedTeam && currentSelectedTeam !== leaverOriginalTeam) {
+                return ` (時段缺)`;
+            }
+        }
+        return "";
     };
 
     // 判斷是否應該顯示請假記錄
@@ -218,7 +293,7 @@ const CalendarCell: React.FC<CalendarCellProps> = ({
         const shouldShow = suggestedTeams.includes(selectedTeam);
 
         // --- 詳細日誌開始 for shouldShowLeaveRecord ---
-        if (record.date === '2025-05-17' || record.date === '2025-05-20' || record.date === '2025-05-24' || record.date === '2025-05-13') { 
+        if (record.date === '2025-05-17' || record.date === '2025-05-20' || record.date === '2025-05-24' || record.date === '2025-05-13') {
             const originalShift = getMemberOriginalShift(record.name); // Re-fetch for this log context
             console.log(`[shouldShowLeaveRecord Debug] Date: ${record.date}, SelectedTeam: ${selectedTeam}`);
             console.log(`  Record Name: ${record.name}, Original Shift: ${originalShift}`);
@@ -234,35 +309,35 @@ const CalendarCell: React.FC<CalendarCellProps> = ({
     // 判斷是否為建議加班班級
     const isSuggestedOvertime = (record: LeaveRecord) => {
         if (!selectedTeam) return false;
-        
+
         // 檢查特定日期 - 如果是 2025-05-08
         const isTargetDate = formattedDate === '2025-05-08';
-        
+
         // 如果是目標日期，且是 A 班或 D 班
         if (isTargetDate && selectedTeam) {
             console.log(`特殊日期加班標籤檢查: ${formattedDate}, 班級: ${selectedTeam}, 請假人: ${record.name}`);
-            
+
             // A 班特殊處理：在 05/08 這天應該始終顯示「可加班」標籤
             if (selectedTeam === 'A') {
                 // 檢查是否已完成後半班加班
-                const isSecondHalfComplete = 
-                    record.fullDayOvertime?.type === '加一半' && 
+                const isSecondHalfComplete =
+                    record.fullDayOvertime?.type === '加一半' &&
                     record.fullDayOvertime.secondHalfMember?.confirmed;
-                
+
                 // 如果後半班加班尚未完成，則在 A 班日曆上顯示「可加班」標籤
                 if (!isSecondHalfComplete) {
                     console.log(`在日期 ${formattedDate} A班日曆顯示請假記錄 ${record.name} 的「可加班」標籤`);
                     return true;
                 }
             }
-            
+
             // D 班特殊處理
             if (selectedTeam === 'D') {
                 // 檢查是否已完成前半班加班
-                const isFirstHalfComplete = 
-                    record.fullDayOvertime?.type === '加一半' && 
+                const isFirstHalfComplete =
+                    record.fullDayOvertime?.type === '加一半' &&
                     record.fullDayOvertime.firstHalfMember?.confirmed;
-                
+
                 // 如果前半班加班尚未完成，則在 D 班日曆上顯示「可加班」標籤
                 if (!isFirstHalfComplete) {
                     console.log(`在日期 ${formattedDate} D班日曆顯示請假記錄 ${record.name} 的「可加班」標籤`);
@@ -270,20 +345,20 @@ const CalendarCell: React.FC<CalendarCellProps> = ({
                 }
             }
         }
-        
+
         // 檢查是否已完成加班
         const isFirstHalfComplete = record.fullDayOvertime?.firstHalfMember?.confirmed || false;
         const isSecondHalfComplete = record.fullDayOvertime?.secondHalfMember?.confirmed || false;
         const isFullDayComplete = record.fullDayOvertime?.type === '加整班' && record.fullDayOvertime.fullDayMember?.confirmed;
         const isCustomOvertimeComplete = record.customOvertime?.confirmed || false;
-        
+
         // 如果全部加班已完成，不顯示標註
-        if ((record.fullDayOvertime?.type === '加整班' && isFullDayComplete) || 
-            (record.fullDayOvertime?.type === '加一半' && isFirstHalfComplete && isSecondHalfComplete) || 
+        if ((record.fullDayOvertime?.type === '加整班' && isFullDayComplete) ||
+            (record.fullDayOvertime?.type === '加一半' && isFirstHalfComplete && isSecondHalfComplete) ||
             isCustomOvertimeComplete) {
             return false;
         }
-        
+
         // 特定班級邏輯：如果前半班或後半班已指定特定班級且該班級與當前選中班級匹配
         if (record.fullDayOvertime?.type === '加一半') {
             // 檢查前半班
@@ -302,7 +377,7 @@ const CalendarCell: React.FC<CalendarCellProps> = ({
             console.log(`自定義加班標籤匹配: ${selectedTeam}`);
             return true;
         }
-        
+
         // 獲取建議加班班級並檢查當前班級是否包含在內
         const suggestedTeams = getSuggestedOvertimeTeams(record);
         const result = suggestedTeams.includes(selectedTeam);
@@ -345,58 +420,34 @@ const CalendarCell: React.FC<CalendarCellProps> = ({
             )}
 
             {/* 顯示請假記錄 */}
-            {dayLeaveRecords.length > 0 && (
-                <div className="flex flex-col justify-center items-center gap-1 w-full mt-1">
-                    {dayLeaveRecords.map((record, idx) => {
-                        if (!shouldShowLeaveRecord(record)) {
-                            return null;
-                        }
-                        
-                        // 檢查加班是否已完成
-                        const isFullDayOvertimeComplete = record.fullDayOvertime?.type === '加整班'
-                            ? record.fullDayOvertime.fullDayMember?.confirmed
-                            : record.fullDayOvertime?.type === '加一半' &&
-                              record.fullDayOvertime.firstHalfMember?.confirmed &&
-                              record.fullDayOvertime.secondHalfMember?.confirmed;
-                        const hasConfirmedCustomOvertime = record.customOvertime?.confirmed;
-                        const isConfirmed = isFullDayOvertimeComplete || hasConfirmedCustomOvertime;
-                        
-                        // 根據角色和狀態設置樣式
-                        const role = getMemberRole(record.name);
-                        let tagClass = '';
-                        
-                        if (isConfirmed) {
-                            tagClass = 'bg-gray-200 text-gray-500';
-                        } else if (role === '班長') {
-                            tagClass = 'bg-red-100 text-red-700';
-                        } else {
-                            tagClass = 'bg-blue-100 text-blue-700';
-                        }
-                        
-                        // 根據請假記錄數量調整字體大小
-                        const fontSizeClass = dayLeaveRecords.length > 4 
-                            ? 'text-[7px]' 
-                            : 'text-[9px]';
-                            
+            <div className="mt-1 space-y-0.5 overflow-y-auto max-h-[70px] scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+                {dayLeaveRecords.map((record, index) => {
+                    if (shouldShowLeaveRecord(record)) {
+                        const deficitLabel = getDeficitLabelForTeam(
+                            record,
+                            selectedTeam,
+                            getMemberOriginalShift, // pass the existing helper from CalendarCell scope
+                            getBigRestTeam // pass the existing helper from CalendarCell scope
+                        );
                         return (
                             <div
-                                key={idx}
-                                className={`flex items-center gap-1 ${tagClass} ${fontSizeClass} px-1 py-0.5 rounded whitespace-nowrap cursor-pointer hover:opacity-80`}
-                                onClick={(e) => {
-                                    e.stopPropagation(); // Prevent triggering cell click if the tag itself is clicked
-                                    if (onToggleLeave) {
-                                        onToggleLeave(date);
-                                    }
-                                }}
+                                key={`${record._id || record.name}-${index}`}
+                                className={`text-[10px] p-0.5 rounded-sm mb-0.5 truncate ${getMemberRole(record.name) === '班長' ? 'bg-red-200 text-red-800' : 'bg-blue-200 text-blue-800'
+                                    }`}
+                                title={`${record.name} (${typeof record.period === 'object' ? `${format(parse(record.period.startTime, 'HHmm', new Date()), 'HH:mm')} - ${format(parse(record.period.endTime, 'HHmm', new Date()), 'HH:mm')}` : '全天'})${deficitLabel}`}
                             >
-                                {record.name}
-                                {/* 若為建議加班班級，顯示標註 */}
-                                {isLeaveMode && isSuggestedOvertime(record) && (
-                                    <span className="ml-1 px-1 py-0.5 bg-yellow-200 text-yellow-800 rounded text-[8px]">可加班</span>
-                                )}
+                                {record.name}{deficitLabel}
                             </div>
                         );
-                    })}
+                    }
+                    return null;
+                })}
+            </div>
+
+            {/* 農曆日期 */}
+            {lunarDate && (
+                <div className="text-xs text-gray-500 text-center mt-1">
+                    {lunarDate}
                 </div>
             )}
         </div>
