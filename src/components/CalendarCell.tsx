@@ -6,7 +6,7 @@ import { zhTW } from 'date-fns/locale';
 import { TEAMS } from '@/data/teams';
 import { getShiftForDate, calculateTeamDeficit, getMemberRole, getMemberTeam } from '@/utils/schedule';
 import type { LeaveRecord } from '@/types/LeaveRecord';
-import type { DaySchedule } from '@/types/schedule';
+import type { DaySchedule, ShiftType } from '@/types/schedule';
 
 interface CalendarCellProps {
     date: Date;
@@ -88,6 +88,16 @@ const CalendarCell: React.FC<CalendarCellProps> = ({
         return memberTeam ? shifts[memberTeam as keyof typeof shifts] : null;
     };
 
+    // Helper: Find a team by a specific shift type for the current day
+    const findTeamByShiftType = (targetShift: ShiftType): string | null => {
+        for (const [team, shift] of Object.entries(shifts)) {
+            if (shift === targetShift) {
+                return team;
+            }
+        }
+        return null;
+    };
+
     // 獲取建議加班班級
     const getSuggestedOvertimeTeams = (record: LeaveRecord) => {
         const suggestions = new Set<string>();
@@ -132,11 +142,12 @@ const CalendarCell: React.FC<CalendarCellProps> = ({
                     if (fhProvidedTeam) {
                         teamToSuggest1 = fhProvidedTeam;
                         if (detailedLog) console.log(`  [FH] Using provided .team field: '${teamToSuggest1}'.`);
-                    } else {
-                        if (memberOriginalShift === '早班') teamToSuggest1 = 'D';
-                        else if (memberOriginalShift === '中班') teamToSuggest1 = 'A';
-                        else if (memberOriginalShift === '夜班') teamToSuggest1 = 'C';
-                        if (detailedLog) console.log(`  [FH] .team field empty. Derived suggestion based on '${memberOriginalShift}' shift: '${teamToSuggest1}'.`);
+                    } else if (memberOriginalShift) { // MODIFIED: Use dynamic suggestion
+                        if (memberOriginalShift === '早班') teamToSuggest1 = findTeamByShiftType('中班');
+                        else if (memberOriginalShift === '中班') teamToSuggest1 = findTeamByShiftType('早班');
+                        else if (memberOriginalShift === '夜班') teamToSuggest1 = findTeamByShiftType('早班'); // Simplified: current day's early shift as stand-in
+                        // Add more conditions if other original shifts like '小休', '大休' need specific suggestions for FH
+                        if (detailedLog) console.log(`  [FH] .team field empty. Derived dynamic suggestion for '${memberOriginalShift}' leaver: '${teamToSuggest1 || 'None found'}'.`);
                     }
                     addSuggestion(teamToSuggest1, 'FH');
                 } else if (detailedLog) {
@@ -155,11 +166,18 @@ const CalendarCell: React.FC<CalendarCellProps> = ({
                     if (shProvidedTeam) {
                         teamToSuggest2 = shProvidedTeam;
                         if (detailedLog) console.log(`  [SH] Using provided .team field: '${teamToSuggest2}'.`);
-                    } else {
-                        if (memberOriginalShift === '早班') teamToSuggest2 = 'A';
-                        else if (memberOriginalShift === '中班') teamToSuggest2 = 'D';
-                        else if (memberOriginalShift === '夜班') teamToSuggest2 = 'D';
-                        if (detailedLog) console.log(`  [SH] .team field empty. Derived suggestion based on '${memberOriginalShift}' shift: '${teamToSuggest2}'.`);
+                    } else if (memberOriginalShift) { // MODIFIED: Use dynamic suggestion
+                        if (memberOriginalShift === '早班') {
+                            teamToSuggest2 = findTeamByShiftType('小休');
+                            if (!teamToSuggest2) teamToSuggest2 = findTeamByShiftType('夜班');
+                        } else if (memberOriginalShift === '中班') {
+                            teamToSuggest2 = findTeamByShiftType('小休');
+                            if (!teamToSuggest2) teamToSuggest2 = findTeamByShiftType('夜班');
+                        } else if (memberOriginalShift === '夜班') {
+                            teamToSuggest2 = findTeamByShiftType('中班'); // Simplified: current day's mid shift as stand-in
+                        }
+                        // Add more conditions if other original shifts like '小休', '大休' need specific suggestions for SH
+                        if (detailedLog) console.log(`  [SH] .team field empty. Derived dynamic suggestion for '${memberOriginalShift}' leaver: '${teamToSuggest2 || 'None found'}'.`);
                     }
                     addSuggestion(teamToSuggest2, 'SH');
                 } else if (detailedLog) {
@@ -258,8 +276,7 @@ const CalendarCell: React.FC<CalendarCellProps> = ({
                         else if (leaverShiftToday === '夜班') suggestedSH = 'D';
                         if (suggestedSH === currentSelectedTeam) isRelevant = true;
                     }
-                    // Important: Ensure this deficit applies if the first half wasn't already flagged for this team
-                    // This logic branch is only reached if the first half didn't return a label for this team.
+                    // Important: Ensure this deficit applies if the first half didn't return a label for this team.
                     if (isRelevant) return ` (後半缺)`;
                 }
             } else if (overtime.type === '加整班') {
@@ -472,7 +489,7 @@ const CalendarCell: React.FC<CalendarCellProps> = ({
                                 }}
                                 title={`${record.name} (${typeof record.period === 'object' ? `${format(parse(record.period.startTime, 'HH:mm', new Date()), 'HH:mm')} - ${format(parse(record.period.endTime, 'HH:mm', new Date()), 'HH:mm')}` : '全天'})${deficitLabel}`} // deficitLabel in title
                             >
-                                {record.name}{deficitLabel} {/* deficitLabel with name */}
+                                {record.name} {/* MODIFIED: Only show name directly */}
                                 {/* 若為建議加班班級，顯示標註 (Restored "可加班" span) */}
                                 {isLeaveMode && isSuggestedOvertime(record) && (
                                     <span className="ml-1 px-1 py-0.5 bg-yellow-200 text-yellow-800 rounded text-[8px]">可加班</span>
