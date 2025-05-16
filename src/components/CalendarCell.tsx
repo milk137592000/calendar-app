@@ -420,29 +420,68 @@ const CalendarCell: React.FC<CalendarCellProps> = ({
             )}
 
             {/* 顯示請假記錄 */}
-            <div className="mt-1 space-y-0.5 overflow-y-auto max-h-[70px] scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
-                {dayLeaveRecords.map((record, index) => {
-                    if (shouldShowLeaveRecord(record)) {
+            {dayLeaveRecords.length > 0 && (
+                <div className="flex flex-col justify-center items-center gap-1 w-full mt-1">
+                    {dayLeaveRecords.map((record, index) => {
+                        if (!shouldShowLeaveRecord(record)) {
+                            return null;
+                        }
+
                         const deficitLabel = getDeficitLabelForTeam(
                             record,
                             selectedTeam,
-                            getMemberOriginalShift, // pass the existing helper from CalendarCell scope
-                            getBigRestTeam // pass the existing helper from CalendarCell scope
+                            getMemberOriginalShift,
+                            getBigRestTeam
                         );
+
+                        // 檢查加班是否已完成 (Restoring original logic for styling)
+                        const isFullDayOvertimeComplete = record.fullDayOvertime?.type === '加整班'
+                            ? record.fullDayOvertime.fullDayMember?.confirmed
+                            : record.fullDayOvertime?.type === '加一半' &&
+                            record.fullDayOvertime.firstHalfMember?.confirmed &&
+                            record.fullDayOvertime.secondHalfMember?.confirmed;
+                        const hasConfirmedCustomOvertime = record.customOvertime?.confirmed;
+                        const isConfirmed = isFullDayOvertimeComplete || hasConfirmedCustomOvertime;
+
+                        // 根據角色和狀態設置樣式 (Restoring original logic for styling)
+                        const role = getMemberRole(record.name);
+                        let tagClass = '';
+
+                        if (isConfirmed) {
+                            tagClass = 'bg-gray-200 text-gray-500';
+                        } else if (role === '班長') {
+                            tagClass = 'bg-red-100 text-red-700';
+                        } else {
+                            tagClass = 'bg-blue-100 text-blue-700';
+                        }
+
+                        // 根據請假記錄數量調整字體大小 (Restoring original logic for styling)
+                        const fontSizeClass = dayLeaveRecords.length > 4
+                            ? 'text-[7px]'
+                            : 'text-[9px]';
+
                         return (
                             <div
-                                key={`${record._id || record.name}-${index}`}
-                                className={`text-[10px] p-0.5 rounded-sm mb-0.5 truncate ${getMemberRole(record.name) === '班長' ? 'bg-red-200 text-red-800' : 'bg-blue-200 text-blue-800'
-                                    }`}
-                                title={`${record.name} (${typeof record.period === 'object' ? `${format(parse(record.period.startTime, 'HH:mm', new Date()), 'HH:mm')} - ${format(parse(record.period.endTime, 'HH:mm', new Date()), 'HH:mm')}` : '全天'})${deficitLabel}`}
+                                key={`${record._id || record.name}-${index}`} // Using new key format is fine
+                                className={`flex items-center gap-1 ${tagClass} ${fontSizeClass} px-1 py-0.5 rounded whitespace-nowrap cursor-pointer hover:opacity-80`} // Restored classes
+                                onClick={(e) => { // Restored onClick
+                                    e.stopPropagation();
+                                    if (onToggleLeave) {
+                                        onToggleLeave(date);
+                                    }
+                                }}
+                                title={`${record.name} (${typeof record.period === 'object' ? `${format(parse(record.period.startTime, 'HH:mm', new Date()), 'HH:mm')} - ${format(parse(record.period.endTime, 'HH:mm', new Date()), 'HH:mm')}` : '全天'})${deficitLabel}`} // deficitLabel in title
                             >
-                                {record.name}{deficitLabel}
+                                {record.name}{deficitLabel} {/* deficitLabel with name */}
+                                {/* 若為建議加班班級，顯示標註 (Restored "可加班" span) */}
+                                {isLeaveMode && isSuggestedOvertime(record) && (
+                                    <span className="ml-1 px-1 py-0.5 bg-yellow-200 text-yellow-800 rounded text-[8px]">可加班</span>
+                                )}
                             </div>
                         );
-                    }
-                    return null;
-                })}
-            </div>
+                    })}
+                </div>
+            )}
 
             {/* 農曆日期 */}
             {lunarDate && (
