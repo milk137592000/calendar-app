@@ -434,7 +434,7 @@ const CalendarCell: React.FC<CalendarCellProps> = ({
                                 key={`${record._id || record.name}-${index}`}
                                 className={`text-[10px] p-0.5 rounded-sm mb-0.5 truncate ${getMemberRole(record.name) === '班長' ? 'bg-red-200 text-red-800' : 'bg-blue-200 text-blue-800'
                                     }`}
-                                title={`${record.name} (${typeof record.period === 'object' ? `${format(parse(record.period.startTime, 'HHmm', new Date()), 'HH:mm')} - ${format(parse(record.period.endTime, 'HHmm', new Date()), 'HH:mm')}` : '全天'})${deficitLabel}`}
+                                title={`${record.name} (${typeof record.period === 'object' ? `${format(parse(record.period.startTime, 'HH:mm', new Date()), 'HH:mm')} - ${format(parse(record.period.endTime, 'HH:mm', new Date()), 'HH:mm')}` : '全天'})${deficitLabel}`}
                             >
                                 {record.name}{deficitLabel}
                             </div>
